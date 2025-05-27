@@ -17,8 +17,10 @@ package armify;
 
 import ghidra.app.ExamplesPluginPackage;
 import ghidra.app.plugin.PluginCategoryNames;
+import ghidra.app.plugin.ProgramPlugin;
 import ghidra.framework.plugintool.*;
 import ghidra.framework.plugintool.util.PluginStatus;
+import ghidra.program.util.ProgramLocation;
 
 //@formatter:off
 @PluginInfo(
@@ -29,20 +31,29 @@ import ghidra.framework.plugintool.util.PluginStatus;
 		description = "Sample plugin to demonstrate how to write a plugin with a dockable GUI component."
 )
 //@formatter:on
-public class ARMifyPlugin extends Plugin {
-private final ARMifyComponentProvider provider;
 
-	public ARMifyPlugin(PluginTool tool) {
-		super(tool);
+public class ARMifyPlugin extends ProgramPlugin {
 
-		provider = new ARMifyComponentProvider(tool, getName());
-	}
+    private ARMifyComponentProvider provider = null;
 
-	@Override
-	public void dispose() {
-		provider.setVisible(false);
+    public ARMifyPlugin(PluginTool tool) {
+        super(tool);
 
-		// The plugin is getting removed from the tool; do any clean up
-		// here and release resources if necessary.
-	}
+        provider = new ARMifyComponentProvider(tool, getName());
+        tool.addComponentProvider(provider, false);
+    }
+
+    @Override
+    protected void locationChanged(ProgramLocation location) {
+        if (provider != null) {
+            provider.locationChanged(currentProgram, location);
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (provider != null) {
+            provider.setVisible(false);
+        }
+    }
 }

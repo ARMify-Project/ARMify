@@ -13,15 +13,21 @@ import javax.swing.JSplitPane;
 
 import docking.WindowPosition;
 import docking.widgets.EmptyBorderButton;
+import docking.widgets.OkDialog;
 import docking.widgets.tree.GTree;
 import docking.widgets.tree.GTreeNode;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
+import ghidra.program.model.lang.Language;
+import ghidra.program.model.listing.Program;
+import ghidra.program.util.ProgramLocation;
 import resources.ResourceManager;
 
 public class ARMifyComponentProvider extends ComponentProviderAdapter {
     private JPanel mainPanel;
     private JPanel contentPanel;
+    private Program currentProgram = null;
+    private ProgramLocation currentLocation = null;
 
     public ARMifyComponentProvider(PluginTool tool, String owner) {
         super(tool, "ARMify Plugin", owner);
@@ -30,12 +36,49 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
         setIcon(customIcon);
         setDefaultWindowPosition(WindowPosition.WINDOW);
         setTitle("ARMify Plugin");
-        setVisible(true);
     }
 
     @Override
     public JComponent getComponent() {
         return mainPanel;
+    }
+
+    void locationChanged(Program program, ProgramLocation location) {
+        this.currentProgram = program;
+        this.currentLocation = location;
+    }
+
+    @Override
+    public void componentShown() {
+        // Validate only when the user manually shows the provider via Window menu
+        if (currentProgram == null) {
+            OkDialog.showError(
+                    "No Program Loaded",
+                    "You must open a program before using the ARMify Plugin."
+            );
+            setVisible(false);
+            return;
+        }
+
+        Language language = currentProgram.getLanguage();
+        boolean isARM = language.getProcessor().toString().equalsIgnoreCase("ARM");
+        boolean isLittleEndian = !language.isBigEndian();
+
+        if (!isARM || !isLittleEndian) {
+            OkDialog.showError(
+                    "Unsupported Program",
+                    "ARMifyPlugin supports only little-endian ARM binaries."
+            );
+            setVisible(false);
+        }
+    }
+
+    private boolean isValidProgram(Program program) {
+        if (program == null) return false;
+        Language language = program.getLanguage();
+        boolean isARM = language.getProcessor().toString().equalsIgnoreCase("ARM");
+        boolean isLittleEndian = !language.isBigEndian();
+        return isARM && isLittleEndian;
     }
 
     private void buildMainPanel() {
