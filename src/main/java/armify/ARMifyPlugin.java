@@ -15,6 +15,7 @@
  */
 package armify;
 
+import armify.view.ARMifyComponentProvider;
 import ghidra.app.ExamplesPluginPackage;
 import ghidra.app.plugin.PluginCategoryNames;
 import ghidra.app.plugin.ProgramPlugin;
