@@ -5,7 +5,6 @@ import java.util.List;
 
 import armify.view.PeripheralAccessEntry;
 import ghidra.program.model.address.Address;
-import ghidra.program.model.address.AddressSpace;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.symbol.RefType;
 import ghidra.program.model.symbol.Reference;
@@ -17,71 +16,62 @@ import ghidra.util.task.TaskMonitor;
  * accesses it finds.  No Swing/UI code here.
  */
 public final class PeripheralScanner {
-
-    private static final long PERIPH_MIN = 0x4000_0000L;
-    private static final long PERIPH_MAX = 0x6000_0000L;
-
-    private PeripheralScanner() {
-    }
-
-    /**
-     * Scan {@code program} and return a fully-populated row list.
-     */
+    // -----------------------------------------------------------------------------
+// Scan the whole program and collect every instruction that touches
+// a Cortex-M MMIO or core-peripheral address.
+// -----------------------------------------------------------------------------
     public static List<PeripheralAccessEntry> scan(Program program,
-                                                   TaskMonitor monitor) throws CancelledException {
+                                                   TaskMonitor monitor)
+            throws CancelledException {
 
         List<PeripheralAccessEntry> rows = new ArrayList<>();
 
         Listing listing = program.getListing();
-        long insnCnt = listing.getNumInstructions();
-        monitor.initialize(insnCnt);
-
-        AddressSpace space = program.getAddressFactory()
-                .getDefaultAddressSpace();
-        Address min = space.getAddress(PERIPH_MIN);
-        Address max = space.getAddress(PERIPH_MAX);
+        long totalInsns = listing.getNumInstructions();
+        monitor.initialize(totalInsns);
 
         for (Instruction ins : listing.getInstructions(true)) {
             monitor.checkCancelled();
             monitor.incrementProgress(1);
 
+            // Every reference that the disassembler attached to *this* instruction
             for (Reference ref : ins.getReferencesFrom()) {
+
                 if (!ref.isMemoryReference()) {
-                    continue;
-                }
-                Address target = ref.getToAddress();
-                if (target == null ||
-                        target.compareTo(min) < 0 ||
-                        target.compareTo(max) >= 0) {
-                    continue;
+                    continue;                       // ignore register/stack/flow refs
                 }
 
-                /* --------- classify read/write & confidence ---------- */
+                Address target = ref.getToAddress();
+                if (!isMmioAddress(target)) {
+                    continue;                       // not in an MMIO window – skip
+                }
+
+                /* ---------- classify access type & confidence ------------- */
                 RefType refType = ref.getReferenceType();
-                String mnemonic = ins.getMnemonicString();
                 boolean read = refType.isRead();
                 boolean write = refType.isWrite();
 
-                String mode, conf;
-                if (read && mnemonic.toLowerCase().startsWith("ldr")) {
-                    mode = "Read";
-                    conf = "High";
-                } else if (write && mnemonic.toLowerCase().startsWith("str")) {
-                    mode = "Write";
+                String mode;
+                String conf;
+                if (read && write) {
+                    mode = "Read/Write";            // LDREX, SWP, bit-band RMW…
                     conf = "High";
                 } else if (read) {
                     mode = "Read";
-                    conf = "Medium";
+                    conf = "High";
                 } else if (write) {
                     mode = "Write";
-                    conf = "Medium";
+                    conf = "High";
                 } else {
-                    mode = "unknown";
+                    mode = "Unknown";               // address-taking only
                     conf = "Low";
                 }
 
-                boolean include = "High".equals(conf);
+            /* Include only the solid hits by default; keep the rest for
+               potential manual inspection. */
+                boolean include = !"Low".equals(conf);
 
+                /* ------------- bookkeeping / row assembly ----------------- */
                 Function fn = program.getFunctionManager()
                         .getFunctionContaining(ins.getAddress());
                 String fnName = (fn != null) ? fn.getName() : "<GLOBAL>";
@@ -96,5 +86,19 @@ public final class PeripheralScanner {
         }
 
         return rows;
+    }
+
+    /* --------------------------------------------------------------------------
+     * Return true iff addr falls in the architecturally defined
+     * MMIO window on every Cortex-M:
+     *   0x4000_0000-0x5FFF_FFFF  – vendor peripheral space (incl. APB/AHB)
+     * ------------------------------------------------------------------------- */
+    private static boolean isMmioAddress(Address addr) {
+        if (addr == null) {
+            return false;
+        }
+        long off = addr.getOffset();
+
+        return off >= 0x4000_0000L && off <= 0x5FFF_FFFFL;
     }
 }

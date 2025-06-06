@@ -104,6 +104,7 @@ public class ARMifyController {
                     tableModel.setData(rows);
 
                     GTable table = new GTable(tableModel);
+                    tableModel.installJumpListener(table);
                     table.setAutoResizeMode(GTable.AUTO_RESIZE_ALL_COLUMNS);
 
                     GTableFilterPanel<PeripheralAccessEntry> filter =

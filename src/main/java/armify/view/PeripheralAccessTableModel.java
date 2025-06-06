@@ -1,15 +1,23 @@
 package armify.view;
 
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import docking.widgets.table.AbstractDynamicTableColumn;
 import docking.widgets.table.GDynamicColumnTableModel;
+import docking.widgets.table.RowObjectTableModel;
 import docking.widgets.table.TableColumnDescriptor;
+import ghidra.app.services.GoToService;
 import ghidra.docking.settings.Settings;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.framework.plugintool.ServiceProvider;
 import ghidra.program.model.address.Address;
+import ghidra.util.Msg;
+
+import javax.swing.*;
 
 /**
  * Lightweight table-model: holds pre-computed rows supplied by the
@@ -20,9 +28,11 @@ public class PeripheralAccessTableModel
         List<PeripheralAccessEntry>> {
 
     private final List<PeripheralAccessEntry> rows = new ArrayList<>();
+    private final PluginTool tool;
 
     public PeripheralAccessTableModel(PluginTool tool) {
         super(tool);
+        this.tool = tool;
     }
 
     /* ---------- data API (called from controller) ---------- */
@@ -201,6 +211,56 @@ public class PeripheralAccessTableModel
                                 List<PeripheralAccessEntry> d,
                                 ServiceProvider sp) {
             return r.getPeripheralAddress();
+        }
+    }
+
+    /* ================================================================== */
+    /* Left-click navigation                                              */
+    /* ================================================================== */
+
+    public void installJumpListener(JTable table) {
+
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e) || e.getClickCount() != 1) {
+                    return;
+                }
+
+                int viewRow = table.rowAtPoint(e.getPoint());
+                int viewCol = table.columnAtPoint(e.getPoint());
+                if (viewRow < 0 || viewCol < 0) {
+                    return;
+                }
+
+                String colName = table.getColumnName(viewCol);
+                if (!Set.of("Instruction Address", "Instruction", "Peripheral Address").contains(colName)) {
+                    return;
+                }
+
+                // The model the JTable is currently using (after filtering)
+                RowObjectTableModel<PeripheralAccessEntry> model =
+                        (RowObjectTableModel<PeripheralAccessEntry>) table.getModel();
+
+                PeripheralAccessEntry entry =
+                        model.getRowObject(table.convertRowIndexToModel(viewRow));
+
+                Address dest = "Peripheral Address".equals(colName)
+                        ? entry.getPeripheralAddress()
+                        : entry.getInstructionAddress();
+
+                goTo(dest);
+            }
+        });
+    }
+
+    private void goTo(Address addr) {
+        GoToService gotoSvc = tool.getService(GoToService.class);
+        if (gotoSvc != null) {
+            gotoSvc.goTo(addr);
+        } else {
+            Msg.showWarn(this, null, "Navigation service missing",
+                    "Cannot navigate to " + addr);
         }
     }
 }
