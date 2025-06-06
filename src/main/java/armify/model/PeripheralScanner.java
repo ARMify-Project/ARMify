@@ -42,7 +42,7 @@ public final class PeripheralScanner {
         Address max = space.getAddress(PERIPH_MAX);
 
         for (Instruction ins : listing.getInstructions(true)) {
-            monitor.checkCanceled();
+            monitor.checkCancelled();
             monitor.incrementProgress(1);
 
             for (Reference ref : ins.getReferencesFrom()) {
@@ -63,24 +63,24 @@ public final class PeripheralScanner {
                 boolean write = refType.isWrite();
 
                 String mode, conf;
-                if (read && mnemonic.startsWith("LDR")) {
-                    mode = "read";
+                if (read && mnemonic.toLowerCase().startsWith("ldr")) {
+                    mode = "Read";
                     conf = "High";
-                } else if (write && mnemonic.startsWith("STR")) {
-                    mode = "write";
+                } else if (write && mnemonic.toLowerCase().startsWith("str")) {
+                    mode = "Write";
                     conf = "High";
                 } else if (read) {
-                    mode = "read";
+                    mode = "Read";
                     conf = "Medium";
                 } else if (write) {
-                    mode = "write";
+                    mode = "Write";
                     conf = "Medium";
                 } else {
                     mode = "unknown";
                     conf = "Low";
                 }
 
-                boolean include = "write".equals(mode);
+                boolean include = "High".equals(conf);
 
                 Function fn = program.getFunctionManager()
                         .getFunctionContaining(ins.getAddress());

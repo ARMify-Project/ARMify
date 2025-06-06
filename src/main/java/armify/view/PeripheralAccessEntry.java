@@ -10,22 +10,22 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
     private boolean include;
 
     // "read", "write" or "unknown"
-    private String mode;
+    private final String mode;
 
     // Confidence level: "High", "Medium" or "Low"
-    private String confidence;
+    private final String confidence;
 
     // Address of the instruction performing the access
-    private Address instructionAddress;
+    private final Address instructionAddress;
 
     // Name of the function containing the instruction (or "<GLOBAL>")
-    private String functionName;
+    private final String functionName;
 
     // Textual representation of the instruction (e.g., "LDR R0, [R7,#0x10]")
-    private String instructionString;
+    private final String instructionString;
 
     // The peripheral address being read or written
-    private Address peripheralAddress;
+    private final Address peripheralAddress;
 
     public PeripheralAccessEntry(
             boolean include,
@@ -75,7 +75,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
     public Address getPeripheralAddress() {
         return peripheralAddress;
     }
-    
+
     @Override
     public int compareTo(PeripheralAccessEntry peripheralAccessEntry) {
         return instructionAddress.compareTo(peripheralAccessEntry.instructionAddress);

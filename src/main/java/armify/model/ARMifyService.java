@@ -17,18 +17,6 @@ public class ARMifyService {
                 cu.getMinAddress(), repr, isInstruction, definedData);
     }
 
-    public static class Record {
-        public final Address address;
-        public final String representation;
-        public final boolean isInstruction;
-        public final boolean isDefinedData;
-
-        public Record(Address address, String representation,
-                      boolean isInstruction, boolean isDefinedData) {
-            this.address = address;
-            this.representation = representation;
-            this.isInstruction = isInstruction;
-            this.isDefinedData = isDefinedData;
-        }
+    public record Record(Address address, String representation, boolean isInstruction, boolean isDefinedData) {
     }
 }

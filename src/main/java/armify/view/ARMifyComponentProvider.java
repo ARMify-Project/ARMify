@@ -29,7 +29,6 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
     private JPanel mainPanel;
     private JPanel contentPanel;
     private Program currentProgram;
-    private ProgramLocation currentLocation;
 
     public ARMifyComponentProvider(PluginTool tool, String owner) {
         super(tool, "ARMify Plugin", owner);
@@ -60,7 +59,6 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
 
     public void locationChanged(Program program, ProgramLocation location) {
         this.currentProgram = program;
-        this.currentLocation = location;
         if (program != null && location != null) {
             controller.updateContext(program, location);
         }

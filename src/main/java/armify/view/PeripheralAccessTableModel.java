@@ -108,7 +108,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class IncludeColumn extends Column<Boolean> {
+    private static class IncludeColumn extends Column<Boolean> {
         IncludeColumn() {
             super("Include");
         }
@@ -126,7 +126,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class ModeColumn extends Column<String> {
+    private static class ModeColumn extends Column<String> {
         ModeColumn() {
             super("Mode");
         }
@@ -139,7 +139,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class ConfidenceColumn extends Column<String> {
+    private static class ConfidenceColumn extends Column<String> {
         ConfidenceColumn() {
             super("Confidence");
         }
@@ -152,7 +152,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class InstrAddrColumn extends Column<Address> {
+    private static class InstrAddrColumn extends Column<Address> {
         InstrAddrColumn() {
             super("Instruction Address");
         }
@@ -165,7 +165,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class FunctionColumn extends Column<String> {
+    private static class FunctionColumn extends Column<String> {
         FunctionColumn() {
             super("Function");
         }
@@ -178,7 +178,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class InstructionColumn extends Column<String> {
+    private static class InstructionColumn extends Column<String> {
         InstructionColumn() {
             super("Instruction");
         }
@@ -191,7 +191,7 @@ public class PeripheralAccessTableModel
         }
     }
 
-    private class PeriphAddrColumn extends Column<Address> {
+    private static class PeriphAddrColumn extends Column<Address> {
         PeriphAddrColumn() {
             super("Peripheral Address");
         }
