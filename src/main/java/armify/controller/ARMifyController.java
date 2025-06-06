@@ -39,7 +39,6 @@ public class ARMifyController {
 
     /* current context */
     private Program program;
-    private ProgramLocation location;
     private Record lastRecord;
 
     /* --- View-A specific members --- */
@@ -58,12 +57,7 @@ public class ARMifyController {
 
     public void updateContext(Program program, ProgramLocation location) {
         this.program = program;
-        this.location = location;
         this.lastRecord = service.analyze(program, location);
-    }
-
-    public Record getRecord() {
-        return lastRecord;
     }
 
     /* -------------------- View A -------------------- */
@@ -134,15 +128,10 @@ public class ARMifyController {
     public JPanel buildViewB() {
         Record r = lastRecord;
         JPanel p = new JPanel(new java.awt.FlowLayout());
-        p.add(new JLabel(r.isInstruction ? "Instruction: "
-                : (r.isDefinedData ? "Defined Data: "
+        p.add(new JLabel(r.isInstruction() ? "Instruction: "
+                : (r.isDefinedData() ? "Defined Data: "
                 : "Undefined Data: ")));
-        p.add(new JLabel(r.representation));
+        p.add(new JLabel(r.representation()));
         return p;
-    }
-
-    /* optional: ProgramActivatedPluginEvent bridge */
-    public void programOpened(ghidra.app.events.ProgramActivatedPluginEvent ev) {
-        program = ev.getActiveProgram();
     }
 }

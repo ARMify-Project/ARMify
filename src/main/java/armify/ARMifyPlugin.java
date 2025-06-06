@@ -35,7 +35,7 @@ import ghidra.program.util.ProgramLocation;
 
 public class ARMifyPlugin extends ProgramPlugin {
 
-    private ARMifyComponentProvider provider = null;
+    private final ARMifyComponentProvider provider;
 
     public ARMifyPlugin(PluginTool tool) {
         super(tool);
