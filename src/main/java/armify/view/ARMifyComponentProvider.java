@@ -25,7 +25,7 @@ import armify.controller.ARMifyController;
 import armify.controller.PluginValidator;
 
 public class ARMifyComponentProvider extends ComponentProviderAdapter {
-    private final ARMifyController controller = new ARMifyController();
+    private final ARMifyController controller = new ARMifyController(this);
     private JPanel mainPanel;
     private JPanel contentPanel;
     private Program currentProgram;
