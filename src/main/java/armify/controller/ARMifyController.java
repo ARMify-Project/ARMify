@@ -62,7 +62,7 @@ public class ARMifyController {
 
     /* -------------------- View A -------------------- */
 
-    public JPanel buildViewA() {
+    public JPanel buildMMIOAddressesView() {
 
         if (program == null) {
             JPanel p = new JPanel(new BorderLayout());
@@ -126,7 +126,7 @@ public class ARMifyController {
 
     /* -------------------- View B (unchanged) -------------------- */
 
-    public JPanel buildViewB() {
+    public JPanel buildCandidateGroupsView() {
         Record r = lastRecord;
         JPanel p = new JPanel(new java.awt.FlowLayout());
         p.add(new JLabel(r.isInstruction() ? "Instruction: "

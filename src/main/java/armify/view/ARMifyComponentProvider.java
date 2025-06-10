@@ -65,7 +65,7 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
     }
 
     private void buildMainPanel() {
-        // Tree on the left as tab selector
+        // Tree on the left as view selector
         GTree tree = new GTree(new RootNode());
         tree.setRootVisible(true);
         tree.addGTreeSelectionListener(event -> {
@@ -80,7 +80,7 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
 
         // Split pane container
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tree, contentPanel);
-        split.setDividerLocation(200);
+        split.setDividerLocation(165);
 
         // Main panel layout
         mainPanel = new JPanel(new BorderLayout());
@@ -90,8 +90,8 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
 
     private void switchPanel(String name) {
         JPanel view = switch (name) {
-            case "View A" -> controller.buildViewA();
-            case "View B" -> controller.buildViewB();
+            case "MMIO Addresses" -> controller.buildMMIOAddressesView();
+            case "Candidate Groups" -> controller.buildCandidateGroupsView();
             default -> defaultPanel();
         };
         contentPanel.removeAll();
@@ -110,14 +110,14 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
     private static class RootNode extends GTreeNode {
         @Override
         public String getName() {
-            return "Tabs";
+            return "ARMify";
         }
 
         @Override
         public List<GTreeNode> generateChildren() {
             List<GTreeNode> children = new ArrayList<>();
-            children.add(new PanelNode("View A"));
-            children.add(new PanelNode("View B"));
+            children.add(new PanelNode("MMIO Addresses"));
+            children.add(new PanelNode("Candidate Groups"));
             return children;
         }
 
@@ -166,7 +166,7 @@ public class ARMifyComponentProvider extends ComponentProviderAdapter {
 
         @Override
         public String getToolTip() {
-            return name + " view";
+            return name + " View";
         }
 
         @Override
