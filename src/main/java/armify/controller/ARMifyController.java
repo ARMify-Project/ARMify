@@ -15,8 +15,8 @@ import armify.model.ARMifyService;
 import armify.model.ARMifyService.Record;
 import armify.model.PeripheralScanner;
 import armify.view.ARMifyComponentProvider;
-import armify.view.PeripheralAccessEntry;
-import armify.view.PeripheralAccessTableModel;
+import armify.view.MMIOAddressTableEntry;
+import armify.view.MMIOAddressTableModel;
 import docking.widgets.table.GTable;
 import docking.widgets.table.GTableFilterPanel;
 import ghidra.framework.plugintool.PluginTool;
@@ -44,7 +44,7 @@ public class ARMifyController {
     /* --- View-A specific members --- */
     private final JPanel viewAPanel = new JPanel();
     private CardLayout cardLayout;
-    private PeripheralAccessTableModel tableModel;
+    private MMIOAddressTableModel tableModel;
 
     private static final String CARD_LOADING = "loading";
     private static final String CARD_TABLE = "table";
@@ -94,12 +94,12 @@ public class ARMifyController {
             @Override
             public void run(TaskMonitor monitor) throws CancelledException {
 
-                List<PeripheralAccessEntry> rows =
+                List<MMIOAddressTableEntry> rows =
                         PeripheralScanner.scan(program, monitor);
 
                 SwingUtilities.invokeLater(() -> {
                     if (tableModel == null) {
-                        tableModel = new PeripheralAccessTableModel(tool);
+                        tableModel = new MMIOAddressTableModel(tool);
                     }
                     tableModel.setData(rows);
 
@@ -107,7 +107,7 @@ public class ARMifyController {
                     tableModel.installJumpListener(table);
                     table.setAutoResizeMode(GTable.AUTO_RESIZE_ALL_COLUMNS);
 
-                    GTableFilterPanel<PeripheralAccessEntry> filter =
+                    GTableFilterPanel<MMIOAddressTableEntry> filter =
                             new GTableFilterPanel<>(table, tableModel);
 
                     JPanel tableCard = new JPanel(new BorderLayout());

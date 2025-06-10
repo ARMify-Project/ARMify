@@ -23,21 +23,21 @@ import javax.swing.*;
  * Lightweight table-model: holds pre-computed rows supplied by the
  * controller.  No program-scanning logic lives here.
  */
-public class PeripheralAccessTableModel
-        extends GDynamicColumnTableModel<PeripheralAccessEntry,
-        List<PeripheralAccessEntry>> {
+public class MMIOAddressTableModel
+        extends GDynamicColumnTableModel<MMIOAddressTableEntry,
+        List<MMIOAddressTableEntry>> {
 
-    private final List<PeripheralAccessEntry> rows = new ArrayList<>();
+    private final List<MMIOAddressTableEntry> rows = new ArrayList<>();
     private final PluginTool tool;
 
-    public PeripheralAccessTableModel(PluginTool tool) {
+    public MMIOAddressTableModel(PluginTool tool) {
         super(tool);
         this.tool = tool;
     }
 
     /* ---------- data API (called from controller) ---------- */
 
-    public void setData(List<PeripheralAccessEntry> newRows) {
+    public void setData(List<MMIOAddressTableEntry> newRows) {
         rows.clear();
         rows.addAll(newRows);
         fireTableDataChanged();
@@ -51,12 +51,12 @@ public class PeripheralAccessTableModel
     }
 
     @Override
-    public List<PeripheralAccessEntry> getModelData() {
+    public List<MMIOAddressTableEntry> getModelData() {
         return rows;
     }
 
     @Override
-    public List<PeripheralAccessEntry> getDataSource() {
+    public List<MMIOAddressTableEntry> getDataSource() {
         return rows;
     }
 
@@ -68,10 +68,10 @@ public class PeripheralAccessTableModel
     /* ---------- column descriptor ---------- */
 
     @Override
-    protected TableColumnDescriptor<PeripheralAccessEntry>
+    protected TableColumnDescriptor<MMIOAddressTableEntry>
     createTableColumnDescriptor() {
 
-        TableColumnDescriptor<PeripheralAccessEntry> d =
+        TableColumnDescriptor<MMIOAddressTableEntry> d =
                 new TableColumnDescriptor<>();
         d.addVisibleColumn(new IncludeColumn());
         d.addVisibleColumn(new ModeColumn());
@@ -103,8 +103,8 @@ public class PeripheralAccessTableModel
     /* ---------- column classes ---------- */
 
     private abstract static class Column<T>
-            extends AbstractDynamicTableColumn<PeripheralAccessEntry, T,
-            List<PeripheralAccessEntry>> {
+            extends AbstractDynamicTableColumn<MMIOAddressTableEntry, T,
+            List<MMIOAddressTableEntry>> {
 
         private final String name;
 
@@ -124,8 +124,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public Boolean getValue(PeripheralAccessEntry r, Settings s,
-                                List<PeripheralAccessEntry> d,
+        public Boolean getValue(MMIOAddressTableEntry r, Settings s,
+                                List<MMIOAddressTableEntry> d,
                                 ServiceProvider sp) {
             return r.isInclude();
         }
@@ -142,8 +142,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public String getValue(PeripheralAccessEntry r, Settings s,
-                               List<PeripheralAccessEntry> d,
+        public String getValue(MMIOAddressTableEntry r, Settings s,
+                               List<MMIOAddressTableEntry> d,
                                ServiceProvider sp) {
             return r.getMode();
         }
@@ -155,8 +155,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public String getValue(PeripheralAccessEntry r, Settings s,
-                               List<PeripheralAccessEntry> d,
+        public String getValue(MMIOAddressTableEntry r, Settings s,
+                               List<MMIOAddressTableEntry> d,
                                ServiceProvider sp) {
             return r.getConfidence();
         }
@@ -168,8 +168,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public Address getValue(PeripheralAccessEntry r, Settings s,
-                                List<PeripheralAccessEntry> d,
+        public Address getValue(MMIOAddressTableEntry r, Settings s,
+                                List<MMIOAddressTableEntry> d,
                                 ServiceProvider sp) {
             return r.getInstructionAddress();
         }
@@ -181,8 +181,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public String getValue(PeripheralAccessEntry r, Settings s,
-                               List<PeripheralAccessEntry> d,
+        public String getValue(MMIOAddressTableEntry r, Settings s,
+                               List<MMIOAddressTableEntry> d,
                                ServiceProvider sp) {
             return r.getFunctionName();
         }
@@ -194,8 +194,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public String getValue(PeripheralAccessEntry r, Settings s,
-                               List<PeripheralAccessEntry> d,
+        public String getValue(MMIOAddressTableEntry r, Settings s,
+                               List<MMIOAddressTableEntry> d,
                                ServiceProvider sp) {
             return r.getInstructionString();
         }
@@ -207,8 +207,8 @@ public class PeripheralAccessTableModel
         }
 
         @Override
-        public Address getValue(PeripheralAccessEntry r, Settings s,
-                                List<PeripheralAccessEntry> d,
+        public Address getValue(MMIOAddressTableEntry r, Settings s,
+                                List<MMIOAddressTableEntry> d,
                                 ServiceProvider sp) {
             return r.getPeripheralAddress();
         }
@@ -239,10 +239,10 @@ public class PeripheralAccessTableModel
                 }
 
                 // The model the JTable is currently using (after filtering)
-                RowObjectTableModel<PeripheralAccessEntry> model =
-                        (RowObjectTableModel<PeripheralAccessEntry>) table.getModel();
+                RowObjectTableModel<MMIOAddressTableEntry> model =
+                        (RowObjectTableModel<MMIOAddressTableEntry>) table.getModel();
 
-                PeripheralAccessEntry entry =
+                MMIOAddressTableEntry entry =
                         model.getRowObject(table.convertRowIndexToModel(viewRow));
 
                 Address dest = "Peripheral Address".equals(colName)
