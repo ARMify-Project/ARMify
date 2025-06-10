@@ -1,36 +1,28 @@
-package armify.view;
+package armify.domain;
 
 import ghidra.program.model.address.Address;
 
-/**
- * Data holder for a single peripheral-access entry.
- */
-public class MMIOAddressTableEntry implements Comparable<MMIOAddressTableEntry> {
-    // Should this access be included in further analysis?
+public class PeripheralAccess implements Comparable<PeripheralAccess> {
     private boolean include;
-
-    // "read", "write" or "unknown"
-    private final String mode;
-
-    // Confidence level: "High", "Medium" or "Low"
-    private final String confidence;
-
-    // Address of the instruction performing the access
+    private final AccessMode mode;
+    private final ConfidenceLevel confidence;
     private final Address instructionAddress;
-
-    // Name of the function containing the instruction (or "<GLOBAL>")
     private final String functionName;
-
-    // Textual representation of the instruction (e.g., "LDR R0, [R7,#0x10]")
     private final String instructionString;
-
-    // The peripheral address being read or written
     private final Address peripheralAddress;
 
-    public MMIOAddressTableEntry(
+    public enum AccessMode {
+        read, write, read_write, unknown
+    }
+
+    public enum ConfidenceLevel {
+        high, medium, low
+    }
+
+    public PeripheralAccess(
             boolean include,
-            String mode,
-            String confidence,
+            AccessMode mode,
+            ConfidenceLevel confidence,
             Address instructionAddress,
             String functionName,
             String instructionString,
@@ -44,6 +36,7 @@ public class MMIOAddressTableEntry implements Comparable<MMIOAddressTableEntry> 
         this.peripheralAddress = peripheralAddress;
     }
 
+    // Getters
     public boolean isInclude() {
         return include;
     }
@@ -52,11 +45,11 @@ public class MMIOAddressTableEntry implements Comparable<MMIOAddressTableEntry> 
         this.include = include;
     }
 
-    public String getMode() {
+    public AccessMode getMode() {
         return mode;
     }
 
-    public String getConfidence() {
+    public ConfidenceLevel getConfidence() {
         return confidence;
     }
 
@@ -77,7 +70,7 @@ public class MMIOAddressTableEntry implements Comparable<MMIOAddressTableEntry> 
     }
 
     @Override
-    public int compareTo(MMIOAddressTableEntry MMIOAddressTableEntry) {
-        return instructionAddress.compareTo(MMIOAddressTableEntry.instructionAddress);
+    public int compareTo(PeripheralAccess other) {
+        return instructionAddress.compareTo(other.instructionAddress);
     }
 }
