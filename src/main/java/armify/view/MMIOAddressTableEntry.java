@@ -5,7 +5,7 @@ import ghidra.program.model.address.Address;
 /**
  * Data holder for a single peripheral-access entry.
  */
-public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> {
+public class MMIOAddressTableEntry implements Comparable<MMIOAddressTableEntry> {
     // Should this access be included in further analysis?
     private boolean include;
 
@@ -27,7 +27,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
     // The peripheral address being read or written
     private final Address peripheralAddress;
 
-    public PeripheralAccessEntry(
+    public MMIOAddressTableEntry(
             boolean include,
             String mode,
             String confidence,
@@ -77,7 +77,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
     }
 
     @Override
-    public int compareTo(PeripheralAccessEntry peripheralAccessEntry) {
-        return instructionAddress.compareTo(peripheralAccessEntry.instructionAddress);
+    public int compareTo(MMIOAddressTableEntry MMIOAddressTableEntry) {
+        return instructionAddress.compareTo(MMIOAddressTableEntry.instructionAddress);
     }
 }

@@ -3,7 +3,7 @@ package armify.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import armify.view.PeripheralAccessEntry;
+import armify.view.MMIOAddressTableEntry;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.symbol.RefType;
@@ -20,11 +20,11 @@ public final class PeripheralScanner {
 // Scan the whole program and collect every instruction that touches
 // a Cortex-M MMIO or core-peripheral address.
 // -----------------------------------------------------------------------------
-    public static List<PeripheralAccessEntry> scan(Program program,
+    public static List<MMIOAddressTableEntry> scan(Program program,
                                                    TaskMonitor monitor)
             throws CancelledException {
 
-        List<PeripheralAccessEntry> rows = new ArrayList<>();
+        List<MMIOAddressTableEntry> rows = new ArrayList<>();
 
         Listing listing = program.getListing();
         long totalInsns = listing.getNumInstructions();
@@ -76,7 +76,7 @@ public final class PeripheralScanner {
                         .getFunctionContaining(ins.getAddress());
                 String fnName = (fn != null) ? fn.getName() : "<GLOBAL>";
 
-                rows.add(new PeripheralAccessEntry(
+                rows.add(new MMIOAddressTableEntry(
                         include, mode, conf,
                         ins.getAddress(),
                         fnName,
