@@ -18,6 +18,7 @@ import ghidra.program.model.listing.Listing;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.mem.*;
 import ghidra.program.model.util.CodeUnitInsertionException;
+import ghidra.program.util.GhidraProgramUtilities;
 import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.exception.NotFoundException;
@@ -112,8 +113,9 @@ public class ProgramInitializationService {
             return false;
         }
 
-        // 5. Run the auto analysis
+        // 5. Run the auto analysis and permanently mark program as analyzed
         runAutoAnalysis(program, tool);
+        GhidraProgramUtilities.markProgramAnalyzed(program);
 
         // 6. Identify MMIO accesses
         try {
