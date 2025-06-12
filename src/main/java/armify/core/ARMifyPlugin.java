@@ -1,9 +1,6 @@
 package armify.core;
 
-import armify.services.DatabaseService;
-import armify.services.ProgramAnalysisService;
-import armify.services.MatchingEngine;
-import armify.services.DeviceGroupingService;
+import armify.services.*;
 import armify.ui.ARMifyProvider;
 import armify.util.ProgramValidator;
 import ghidra.app.ExamplesPluginPackage;
@@ -11,54 +8,56 @@ import ghidra.app.plugin.PluginCategoryNames;
 import ghidra.app.plugin.ProgramPlugin;
 import ghidra.framework.plugintool.*;
 import ghidra.framework.plugintool.util.PluginStatus;
+import ghidra.program.model.listing.Program;
 import ghidra.program.util.ProgramLocation;
 
+/**
+ * Main plugin entry-point.
+ * <p>
+ * Initialisation is now deferred until the user opens the provider window.
+ */
 @PluginInfo(
         status = PluginStatus.RELEASED,
         packageName = ExamplesPluginPackage.NAME,
         category = PluginCategoryNames.EXAMPLES,
-        shortDescription = "ARMify Plugin",
-        description = "Identifies Cortex-M microcontrollers from MMIO address patterns"
+        shortDescription = "ARMify plugin",
+        description = "Identify Cortex-M MCUs from MMIO patterns"
 )
 public class ARMifyPlugin extends ProgramPlugin {
 
-    private ARMifyProvider provider;
-    private ProgramAnalysisService analysisService;
-    private DatabaseService databaseService;
-    private MatchingEngine matchingEngine;
+    private final ARMifyProvider provider;
 
     public ARMifyPlugin(PluginTool tool) {
         super(tool);
-        initializeServices();
-        initializeUI();
-    }
 
-    private void initializeServices() {
-        databaseService = new DatabaseService();
-        DeviceGroupingService groupingService = new DeviceGroupingService(databaseService);
-        matchingEngine = new MatchingEngine(databaseService, groupingService);
-        analysisService = new ProgramAnalysisService();
-    }
+        /* shared, stateless helpers ------------------------------------ */
+        ProgramStorageService programStorageService = new ProgramStorageService();
 
-    private void initializeUI() {
-        provider = new ARMifyProvider(tool, getName(), analysisService, matchingEngine);
+        DatabaseService databaseService = new DatabaseService();
+        DeviceGroupingService deviceGroupingService = new DeviceGroupingService(databaseService);
+        MatchingEngine matchingEngine = new MatchingEngine(databaseService, deviceGroupingService);
+
+        ProgramAnalysisService programAnalysisService = new ProgramAnalysisService();
+        ProgramInitializationService programInitializationService =
+                new ProgramInitializationService(programAnalysisService, programStorageService);
+
+        provider = new ARMifyProvider(tool, getName(), matchingEngine, programInitializationService);
         tool.addComponentProvider(provider, false);
     }
 
+    /* programme lifecycle ---------------------------------------------- */
     @Override
-    protected void locationChanged(ProgramLocation location) {
-        if (provider != null && ProgramValidator.isValid(currentProgram)) {
-            provider.onLocationChanged(currentProgram, location);
+    protected void programActivated(Program program) {
+
+        if (!ProgramValidator.isValid(program)) {
+            provider.setProgramReference(null);
+            return;
         }
+        provider.setProgramReference(program);   // no init yet, happens on first show
     }
 
     @Override
-    public void dispose() {
-        if (provider != null) {
-            provider.setVisible(false);
-        }
-        if (databaseService != null) {
-            databaseService.close();
-        }
+    protected void locationChanged(ProgramLocation programLocation) {
+        provider.onLocationChanged(currentProgram, programLocation);
     }
 }
