@@ -36,7 +36,7 @@ public class NavigationTree {
     private static class RootNode extends GTreeNode {
         @Override
         public String getName() {
-            return "ARMify";
+            return "ARMify Plugin";
         }
 
         @Override
@@ -59,7 +59,7 @@ public class NavigationTree {
 
         @Override
         public String getToolTip() {
-            return "ARM Firmware Identifier";
+            return "ARMify Plugin";
         }
     }
 

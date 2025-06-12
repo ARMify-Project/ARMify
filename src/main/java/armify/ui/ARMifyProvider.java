@@ -1,172 +1,129 @@
 package armify.ui;
 
 import armify.domain.EventBus;
-import armify.domain.PeripheralAccess;
 import armify.services.MatchingEngine;
-import armify.services.ProgramAnalysisService;
+import armify.services.ProgramInitializationService;
 import armify.ui.components.NavigationTree;
-import armify.ui.events.*;
+import armify.ui.events.LocationChangedEvent;
+import armify.ui.events.ViewSelectionEvent;
 import armify.ui.views.*;
-import armify.util.ProgramValidator;
 import docking.WindowPosition;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.listing.Program;
 import ghidra.program.util.ProgramLocation;
-import ghidra.util.task.Task;
-import ghidra.util.task.TaskLauncher;
-import ghidra.util.task.TaskMonitor;
 import resources.ResourceManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Entry-point docking provider wiring the navigation tree to the two view
- * cards.  Unchanged except the MMIOAddressView now needs the tool for
- * GoTo-navigation, which was already passed in the constructor.
+ * Provider becomes visible only via Window → ARMify.  The first time it is
+ * shown for a programme, the initialisation dialog is displayed; if the user
+ * cancels, the provider hides itself and will ask again next time.
  */
 public class ARMifyProvider extends ComponentProviderAdapter {
 
-    private final ProgramAnalysisService analysisService;
-    private final MatchingEngine matchingEngine;
     private final EventBus eventBus = new EventBus();
+    private final Map<ViewType, ViewComponent> views = new EnumMap<>(ViewType.class);
 
-    private JPanel mainPanel;
-    private CardLayout cardLayout;
-    private JPanel viewContainer;
-    private NavigationTree navigationTree;
-    private Map<ViewType, ViewComponent> views = new EnumMap<>(ViewType.class);
+    private final CardLayout cardLayout = new CardLayout();
+    private final JPanel viewContainer = new JPanel(cardLayout);
+    private JPanel rootPanel;
 
+    /* injected services */
+    private final ProgramInitializationService programInitializationService;
+    private final PluginTool tool;
+
+    /* dynamic state */
     private Program currentProgram;
+    private boolean initDone = false;      // per programme
 
-    public ARMifyProvider(PluginTool tool, String owner,
-                          ProgramAnalysisService analysisService,
-                          MatchingEngine matchingEngine) {
+    /* ------------------------------------------------------------------ */
+    public ARMifyProvider(PluginTool tool,
+                          String owner,
+                          MatchingEngine eng,
+                          ProgramInitializationService programInitializationService) {
+
         super(tool, "ARMify Plugin", owner);
-        this.analysisService = analysisService;
-        this.matchingEngine = matchingEngine;
+        this.tool = tool;
+        this.programInitializationService = programInitializationService;
 
-        initializeUI();
-        registerEventHandlers();
+        buildUI(eng);
+        registerHandlers();
 
         setIcon(ResourceManager.loadImage("images/logo.png"));
         setDefaultWindowPosition(WindowPosition.WINDOW);
         setTitle("ARMify Plugin");
-        setVisible(false);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* UI setup                                                            */
-    /* ------------------------------------------------------------------ */
+    /* UI ---------------------------------------------------------------- */
+    private void buildUI(MatchingEngine eng) {
 
-    private void initializeUI() {
-        mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        NavigationTree nav = new NavigationTree(eventBus);
 
-        navigationTree = new NavigationTree(eventBus);
+        views.put(ViewType.MMIO_ADDRESSES, new MMIOAddressView(eventBus, tool));
+        views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(eng, eventBus));
 
-        cardLayout = new CardLayout();
-        viewContainer = new JPanel(cardLayout);
-
-        // Updated MMIO view keeps the same constructor
-        views.put(ViewType.MMIO_ADDRESSES,
-                new MMIOAddressView(eventBus, tool));
-        views.put(ViewType.CANDIDATE_GROUPS,
-                new CandidateGroupsView(matchingEngine, eventBus));
-
-        for (Map.Entry<ViewType, ViewComponent> entry : views.entrySet()) {
-            viewContainer.add(entry.getValue().getComponent(),
-                    entry.getKey().name());
+        for (Map.Entry<ViewType, ViewComponent> e : views.entrySet()) {
+            viewContainer.add(e.getValue().getComponent(), e.getKey().name());
         }
+        cardLayout.show(viewContainer, ViewType.MMIO_ADDRESSES.name());
 
-        viewContainer.add(createDefaultPanel(), "DEFAULT");
-        cardLayout.show(viewContainer, "DEFAULT");
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+                nav.getComponent(),
+                viewContainer);
+        split.setDividerLocation(165);
 
-        JSplitPane splitPane =
-                new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-                        navigationTree.getComponent(),
-                        viewContainer);
-        splitPane.setDividerLocation(165);
-        mainPanel.add(splitPane, BorderLayout.CENTER);
+        rootPanel = new JPanel(new BorderLayout());
+        rootPanel.add(split, BorderLayout.CENTER);
     }
 
-    private JPanel createDefaultPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        panel.setBorder(BorderFactory.createTitledBorder("ARMify Plugin"));
-        panel.add(new JLabel("Select a view from the navigation tree"));
-        JButton selectButton = new JButton("Run Analysis");
-        selectButton.addActionListener(e -> startAnalysisTask());
-        panel.add(selectButton);
-        return panel;
+    private void registerHandlers() {
+        eventBus.subscribe(ViewSelectionEvent.class,
+                ev -> cardLayout.show(viewContainer, ev.getViewType().name()));
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Event handling                                                      */
-    /* ------------------------------------------------------------------ */
-
-    private void registerEventHandlers() {
-        eventBus.subscribe(ViewSelectionEvent.class, this::handleViewSelection);
+    public void setProgramReference(Program p) {
+        this.currentProgram = p;
+        this.initDone = false;     // reset for new programme
     }
 
-    private void handleViewSelection(ViewSelectionEvent event) {
-        cardLayout.show(viewContainer, event.getViewType().name());
-    }
-
-    private void startAnalysisTask() {
-
-        Task analysisTask = new Task("Scanning MMIO Accesses",
-                false, true, false) {
-            @Override
-            public void run(TaskMonitor monitor) {
-                try {
-                    monitor.setMessage(
-                            "Analyzing program for peripheral accesses…");
-                    List<PeripheralAccess> accesses =
-                            analysisService.scanPeripheralAccesses(
-                                    currentProgram, monitor);
-
-                    SwingUtilities.invokeLater(() ->
-                            eventBus.publish(
-                                    new AnalysisCompleteEvent(accesses)));
-                } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() ->
-                            JOptionPane.showMessageDialog(mainPanel,
-                                    "Analysis failed: " + ex.getMessage(),
-                                    "Error", JOptionPane.ERROR_MESSAGE));
-                }
-            }
-        };
-
-        new TaskLauncher(analysisTask, tool.getActiveWindow());
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Provider callbacks                                                  */
-    /* ------------------------------------------------------------------ */
-
-    @Override
-    public JComponent getComponent() {
-        return mainPanel;
+    public void onLocationChanged(Program p, ProgramLocation loc) {
+        if (p != null && loc != null) {
+            eventBus.publish(new LocationChangedEvent(p, loc));
+        }
     }
 
     @Override
     public void componentShown() {
-        if (!ProgramValidator.isValid(currentProgram)) {
-            JOptionPane.showMessageDialog(getComponent(),
-                    "ARMify Plugin supports only little-endian ARM binaries.",
-                    "Unsupported Program", JOptionPane.ERROR_MESSAGE);
-            setVisible(false);
+        /* We intercept BEFORE showing any UI */
+        if (currentProgram == null) {
+            return;
         }
+        if (initDone) {
+            super.componentShown();   // normal repaint
+            return;
+        }
+
+        /* 1 – immediately hide the placeholder window */
+        setVisible(false);
+
+        /* 2 – run initialisation (may pop up dialogs) */
+        boolean ok = programInitializationService.ensureInitialised(tool, currentProgram, eventBus);
+
+        if (ok) {
+            initDone = true;
+            /* 3 – show the fully prepared provider */
+            setVisible(true);          // triggers a new componentShown()
+        }
+        /* if cancelled: remain hidden; user can reopen the menu later */
     }
 
-    public void onLocationChanged(Program program, ProgramLocation location) {
-        this.currentProgram = program;
-        if (program != null && location != null) {
-            eventBus.publish(new LocationChangedEvent(program, location));
-        }
+    @Override
+    public JComponent getComponent() {
+        return rootPanel;
     }
 }
