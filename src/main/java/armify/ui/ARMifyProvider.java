@@ -86,6 +86,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
             viewContainer.add(e.getValue().getComponent(), e.getKey().name());
         }
         cardLayout.show(viewContainer, ViewType.MMIO_ADDRESSES.name());
+        nav.selectView(ViewType.MMIO_ADDRESSES);
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 nav.getComponent(),
