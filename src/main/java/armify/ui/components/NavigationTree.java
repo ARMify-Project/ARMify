@@ -22,6 +22,17 @@ public class NavigationTree {
         tree.addGTreeSelectionListener(this::handleSelectionChanged);
     }
 
+    public void selectView(ViewType viewType) {
+        GTreeNode root = tree.getModelRoot();
+        for (GTreeNode child : root.getChildren()) {
+            if (child instanceof ViewNode vn &&
+                    vn.getViewType() == viewType) {
+                tree.setSelectedNode(child);   // paints blue + raises event
+                break;
+            }
+        }
+    }
+
     private void handleSelectionChanged(GTreeSelectionEvent event) {
         Object node = event.getNewLeadSelectionPath().getLastPathComponent();
         if (node instanceof ViewNode viewNode) {
