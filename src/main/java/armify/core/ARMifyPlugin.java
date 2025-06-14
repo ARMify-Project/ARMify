@@ -43,6 +43,7 @@ public class ARMifyPlugin extends ProgramPlugin {
 
         provider = new ARMifyProvider(tool, getName(), matchingEngine, programInitializationService);
         tool.addComponentProvider(provider, false);
+        provider.registerInitialActions();
     }
 
     /* programme lifecycle ---------------------------------------------- */

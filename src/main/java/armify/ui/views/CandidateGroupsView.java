@@ -3,13 +3,21 @@ package armify.ui.views;
 import armify.domain.EventBus;
 import armify.services.MatchingEngine;
 import armify.ui.events.*;
+import docking.action.DockingAction;
+import docking.action.ToolBarData;
+import ghidra.framework.plugintool.ComponentProviderAdapter;
+import ghidra.framework.plugintool.PluginTool;
+import resources.Icons;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
+import java.util.ArrayList;
 
 public class CandidateGroupsView implements ViewComponent {
     private final MatchingEngine matchingEngine;
     private final EventBus eventBus;
+    private final List<DockingAction> actions = new ArrayList<>();
     private final JPanel mainPanel;
 
     public CandidateGroupsView(MatchingEngine matchingEngine, EventBus eventBus) {
@@ -19,6 +27,25 @@ public class CandidateGroupsView implements ViewComponent {
         mainPanel = new JPanel(new BorderLayout());
         initializeUI();
         registerEventHandlers();
+        buildActions();
+    }
+
+    private void buildActions() {
+        DockingAction export = new DockingAction("Export Groups", "ARMify Plugin") {
+
+            @Override
+            public void actionPerformed(docking.ActionContext c) {
+                System.out.println("do export");
+            }
+
+            @Override
+            public boolean isEnabledForContext(docking.ActionContext c) {
+                return true;
+            }
+        };
+
+        export.setToolBarData(new ToolBarData(Icons.ADD_ICON, "0ARMify"));
+        actions.add(export);
     }
 
     private void initializeUI() {
@@ -101,5 +128,15 @@ public class CandidateGroupsView implements ViewComponent {
     @Override
     public JComponent getComponent() {
         return mainPanel;
+    }
+
+    @Override
+    public List<DockingAction> getViewActions() {
+        return actions;
+    }
+
+    @Override
+    public void installListeners(PluginTool tool, ComponentProviderAdapter provider) {
+
     }
 }
