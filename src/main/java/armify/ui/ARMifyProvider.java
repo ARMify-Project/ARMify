@@ -28,6 +28,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
     private final EventBus eventBus = new EventBus();
     private final Map<ViewType, ViewComponent> views = new EnumMap<>(ViewType.class);
+    private ViewType currentView = ViewType.MMIO_ADDRESSES;
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel viewContainer = new JPanel(cardLayout);
@@ -52,11 +53,25 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         this.programInitializationService = programInitializationService;
 
         buildUI(eng);
+        views.values().forEach(v -> v.installListeners(tool, this));
         registerHandlers();
 
         setIcon(ResourceManager.loadImage("images/logo.png"));
         setDefaultWindowPosition(WindowPosition.WINDOW);
         setTitle("ARMify Plugin");
+    }
+
+    public void registerInitialActions() {
+        views.values().forEach(v -> v.installListeners(tool, this));
+        addActionsFor(currentView);
+    }
+
+    private void addActionsFor(ViewType vt) {
+        views.get(vt).getViewActions().forEach(this::addLocalAction);
+    }
+
+    private void removeActionsFor(ViewType vt) {
+        views.get(vt).getViewActions().forEach(this::removeLocalAction);
     }
 
     /* UI ---------------------------------------------------------------- */
@@ -82,8 +97,18 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     }
 
     private void registerHandlers() {
-        eventBus.subscribe(ViewSelectionEvent.class,
-                ev -> cardLayout.show(viewContainer, ev.getViewType().name()));
+        eventBus.subscribe(ViewSelectionEvent.class, ev -> {
+
+            ViewType newView = ev.getViewType();
+            if (newView == currentView) {
+                return;                       // nothing to do
+            }
+
+            removeActionsFor(currentView);    // 1. hide old buttons
+            currentView = newView;            // 2. remember
+            addActionsFor(currentView);       // 3. show new buttons
+            cardLayout.show(viewContainer, currentView.name());
+        });
     }
 
     public void setProgramReference(Program p) {

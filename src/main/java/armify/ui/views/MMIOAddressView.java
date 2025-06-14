@@ -3,13 +3,18 @@ package armify.ui.views;
 import armify.domain.EventBus;
 import armify.domain.PeripheralAccess;
 import armify.ui.events.AnalysisCompleteEvent;
+import docking.ActionContext;
+import docking.action.DockingAction;
+import docking.action.ToolBarData;
 import docking.widgets.table.*;
 import ghidra.app.services.GoToService;
 import ghidra.docking.settings.Settings;
+import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.framework.plugintool.ServiceProvider;
 import ghidra.program.model.address.Address;
 import ghidra.util.Msg;
+import resources.Icons;
 
 import javax.swing.*;
 import java.awt.*;
@@ -25,24 +30,14 @@ import java.util.Set;
  * single-click navigation and a GTableFilterPanel.
  */
 public class MMIOAddressView implements ViewComponent {
-
-    /* ------------------------------------------------------------------ */
-    /* Fields                                                              */
-    /* ------------------------------------------------------------------ */
-
     private final EventBus eventBus;
-    private final PluginTool tool;          // needed for GoToService
+    private final List<DockingAction> actions = new ArrayList<>();
     private final JPanel mainPanel;
     private final AccessTableModel tableModel;
     private final GTable table;
 
-    /* ------------------------------------------------------------------ */
-    /* Construction                                                        */
-    /* ------------------------------------------------------------------ */
-
     public MMIOAddressView(EventBus eventBus, PluginTool tool) {
         this.eventBus = eventBus;
-        this.tool = tool;
 
         tableModel = new AccessTableModel(tool);
         table = new GTable(tableModel);
@@ -52,11 +47,8 @@ public class MMIOAddressView implements ViewComponent {
         mainPanel.add(createTablePanel(), BorderLayout.CENTER);
 
         registerEventHandlers();
+        buildActions();
     }
-
-    /* ------------------------------------------------------------------ */
-    /* UI helpers                                                          */
-    /* ------------------------------------------------------------------ */
 
     private void setupTable() {
 
@@ -74,6 +66,27 @@ public class MMIOAddressView implements ViewComponent {
         table.getColumnModel().getColumn(4).setPreferredWidth(140); // Function
         table.getColumnModel().getColumn(5).setPreferredWidth(140); // Instruction
         table.getColumnModel().getColumn(6).setPreferredWidth(100); // PeriphAddr
+    }
+
+    private void buildActions() {
+
+        DockingAction merge = new DockingAction("Merge Rows", "ARMify Plugin") {
+
+            @Override
+            public void actionPerformed(ActionContext c) {
+                System.out.println("do merge");
+            }
+
+            /* only show while MMIO card active */
+            @Override
+            public boolean isEnabledForContext(ActionContext c) {
+                return table.getSelectedRowCount() > 1;
+            }
+        };
+
+        merge.setToolBarData(new ToolBarData(Icons.ARROW_UP_LEFT_ICON, "0ARMify"));
+        merge.setDescription("Merge selected MMIO rows");
+        actions.add(merge);
     }
 
     private JPanel createTablePanel() {
@@ -138,6 +151,20 @@ public class MMIOAddressView implements ViewComponent {
     @Override
     public JComponent getComponent() {
         return mainPanel;
+    }
+
+    @Override
+    public List<DockingAction> getViewActions() {
+        return actions;
+    }
+
+    @Override
+    public void installListeners(PluginTool tool, ComponentProviderAdapter provider) {
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                tool.contextChanged(provider);
+            }
+        });
     }
 
     /* ================================================================== */
