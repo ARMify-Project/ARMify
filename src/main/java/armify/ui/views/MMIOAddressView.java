@@ -397,9 +397,7 @@ public class MMIOAddressView implements ViewComponent {
                         return;
                     }
 
-                    RowObjectTableModel<PeripheralAccess> model =
-                            (RowObjectTableModel<PeripheralAccess>)
-                                    table.getModel();
+                    RowObjectTableModel<PeripheralAccess> model = AccessTableModel.this;
 
                     PeripheralAccess entry =
                             model.getRowObject(
