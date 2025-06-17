@@ -18,17 +18,12 @@ import resources.Icons;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * “MMIO Addresses” view restored to the original column order,
- * single-click navigation and a GTableFilterPanel.
- */
 public class MMIOAddressView implements ViewComponent {
     private final EventBus eventBus;
     private final List<DockingAction> actions = new ArrayList<>();
@@ -57,90 +52,76 @@ public class MMIOAddressView implements ViewComponent {
         table.setAutoResizeMode(GTable.AUTO_RESIZE_ALL_COLUMNS);
 
         tableModel.installJumpListener(table);
-
-        // Preferred column widths – keep narrow Include / Mode columns
-        table.getColumnModel().getColumn(0).setPreferredWidth(60);  // Include
-        table.getColumnModel().getColumn(1).setPreferredWidth(60);  // Mode
-        table.getColumnModel().getColumn(2).setPreferredWidth(80);  // Confidence
-        table.getColumnModel().getColumn(3).setPreferredWidth(100); // InstrAddr
-        table.getColumnModel().getColumn(4).setPreferredWidth(140); // Function
-        table.getColumnModel().getColumn(5).setPreferredWidth(140); // Instruction
-        table.getColumnModel().getColumn(6).setPreferredWidth(100); // PeriphAddr
     }
 
     private void buildActions() {
+        DockingAction refreshDockingAction = refreshDockingAction();
+        actions.add(refreshDockingAction);
 
-        DockingAction merge = new DockingAction("Merge Rows", "ARMify Plugin") {
+        DockingAction addDockingAction = addDockingAction();
+        actions.add(addDockingAction);
+
+        DockingAction deleteDockingAction = deleteDockingAction();
+        actions.add(deleteDockingAction);
+    }
+
+    private DockingAction refreshDockingAction() {
+        DockingAction refresh = new DockingAction("Refresh all", "ARMify Plugin") {
 
             @Override
             public void actionPerformed(ActionContext c) {
-                System.out.println("do merge");
-            }
-
-            /* only show while MMIO card active */
-            @Override
-            public boolean isEnabledForContext(ActionContext c) {
-                return table.getSelectedRowCount() > 1;
+                System.out.println("do refresh");
             }
         };
 
-        merge.setToolBarData(new ToolBarData(Icons.ARROW_UP_LEFT_ICON, "0ARMify"));
-        merge.setDescription("Merge selected MMIO rows");
-        actions.add(merge);
+        refresh.setToolBarData(new ToolBarData(Icons.REFRESH_ICON, "0ARMify"));
+        refresh.setDescription("Refresh all scanned accesses");
+        return refresh;
+    }
+
+    private DockingAction addDockingAction() {
+        DockingAction add = new DockingAction("Add Custom MMIO Access", "ARMify Plugin") {
+
+            @Override
+            public void actionPerformed(ActionContext c) {
+                System.out.println("do add");
+            }
+        };
+
+        add.setToolBarData(new ToolBarData(Icons.ADD_ICON, "0ARMify"));
+        add.setDescription("Add custom access");
+        return add;
+    }
+
+    private DockingAction deleteDockingAction() {
+        DockingAction delete = new DockingAction("Delete Row(s)", "ARMify Plugin") {
+
+            @Override
+            public void actionPerformed(ActionContext c) {
+                System.out.println("do delete");
+            }
+
+            @Override
+            public boolean isEnabledForContext(ActionContext c) {
+                return table.getSelectedRowCount() >= 1;
+            }
+        };
+
+        delete.setToolBarData(new ToolBarData(Icons.DELETE_ICON, "0ARMify"));
+        delete.setDescription("Delete selected rows");
+        return delete;
     }
 
     private JPanel createTablePanel() {
 
         JPanel panel = new JPanel(new BorderLayout());
-
-        // Toolbar with Add / Delete
-        JToolBar toolbar = new JToolBar();
-        toolbar.setFloatable(false);
-
-        JButton addButton = new JButton("Add");
-        JButton deleteButton = new JButton("Delete");
-        addButton.addActionListener(this::handleAddButton);
-        deleteButton.addActionListener(this::handleDeleteButton);
-        toolbar.add(addButton);
-        toolbar.add(deleteButton);
-
-        panel.add(toolbar, BorderLayout.NORTH);
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // Ghidra filter panel (ships with docking widgets)
-        GTableFilterPanel<PeripheralAccess> filter =
-                new GTableFilterPanel<>(table, tableModel);
+        GTableFilterPanel<PeripheralAccess> filter = new GTableFilterPanel<>(table, tableModel);
         panel.add(filter, BorderLayout.SOUTH);
 
         return panel;
     }
-
-    /* ------------------------------------------------------------------ */
-    /* Toolbar actions                                                     */
-    /* ------------------------------------------------------------------ */
-
-    private void handleAddButton(ActionEvent e) {
-        JOptionPane.showMessageDialog(mainPanel,
-                "Add functionality not yet implemented");
-    }
-
-    private void handleDeleteButton(ActionEvent e) {
-
-        int[] viewRows = table.getSelectedRows();
-        if (viewRows.length == 0) {
-            return;
-        }
-
-        int[] modelRows = new int[viewRows.length];
-        for (int i = 0; i < viewRows.length; i++) {
-            modelRows[i] = table.convertRowIndexToModel(viewRows[i]);
-        }
-        tableModel.removeRows(modelRows);
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Event handling                                                      */
-    /* ------------------------------------------------------------------ */
 
     private void registerEventHandlers() {
         eventBus.subscribe(AnalysisCompleteEvent.class,
@@ -172,9 +153,7 @@ public class MMIOAddressView implements ViewComponent {
     /* ================================================================== */
 
     private static class AccessTableModel
-            extends GDynamicColumnTableModel<PeripheralAccess,
-            List<PeripheralAccess>> {
-
+            extends GDynamicColumnTableModel<PeripheralAccess, List<PeripheralAccess>> {
         private final List<PeripheralAccess> rows = new ArrayList<>();
         private final PluginTool tool;
 
@@ -182,8 +161,6 @@ public class MMIOAddressView implements ViewComponent {
             super(tool);
             this.tool = tool;
         }
-
-        /* ---------- data API ---------- */
 
         void setData(List<PeripheralAccess> newRows) {
             rows.clear();
@@ -198,8 +175,6 @@ public class MMIOAddressView implements ViewComponent {
             }
             fireTableDataChanged();
         }
-
-        /* ---------- GTable model basics ---------- */
 
         @Override
         public int getRowCount() {
@@ -231,6 +206,8 @@ public class MMIOAddressView implements ViewComponent {
                     new TableColumnDescriptor<>();
 
             d.addVisibleColumn(new IncludeColumn());
+            d.addVisibleColumn(new GainColumn());
+            d.addVisibleColumn(new TypeColumn());
             d.addVisibleColumn(new ModeColumn());
             d.addVisibleColumn(new ConfidenceColumn());
             d.addVisibleColumn(new InstrAddrColumn());
@@ -243,25 +220,20 @@ public class MMIOAddressView implements ViewComponent {
         /* Only “Include” is editable */
         @Override
         public boolean isCellEditable(int row, int col) {
-            return "Include".equals(getColumnName(col));
+            return "Incl.".equals(getColumnName(col));
         }
 
         @Override
         public void setValueAt(Object aValue, int row, int col) {
-            if ("Include".equals(getColumnName(col)) &&
+            if ("Incl.".equals(getColumnName(col)) &&
                     row < rows.size() && aValue instanceof Boolean b) {
                 rows.get(row).setInclude(b);
                 fireTableRowsUpdated(row, row);
             }
         }
 
-        /* ---------- Column helper base ---------- */
-
         private abstract static class Column<T>
-                extends AbstractDynamicTableColumn<PeripheralAccess,
-                T,
-                List<PeripheralAccess>> {
-
+                extends AbstractDynamicTableColumn<PeripheralAccess, T, List<PeripheralAccess>> {
             private final String name;
 
             Column(String name) {
@@ -274,23 +246,52 @@ public class MMIOAddressView implements ViewComponent {
             }
         }
 
-        /* ---------- Individual columns ---------- */
-
         private static class IncludeColumn extends Column<Boolean> {
             IncludeColumn() {
-                super("Include");
+                super("Incl.");
             }
 
             @Override
-            public Boolean getValue(PeripheralAccess r, Settings s,
-                                    List<PeripheralAccess> d,
-                                    ServiceProvider sp) {
+            public Boolean getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.isInclude();
             }
 
             @Override
-            public int getColumnPreferredWidth() {
-                return 60;
+            public String getColumnDescription() {
+                return "Include";
+            }
+        }
+
+        private static class GainColumn extends Column<String> {
+            GainColumn() {
+                super("Gain");
+            }
+
+            @Override
+            public String getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
+                if (r.isInclude()) return "0";
+                return "";
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Gain";
+            }
+        }
+
+        private static class TypeColumn extends Column<String> {
+            TypeColumn() {
+                super("Type");
+            }
+
+            @Override
+            public String getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
+                return r.getType().toString();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Type";
             }
         }
 
@@ -300,82 +301,97 @@ public class MMIOAddressView implements ViewComponent {
             }
 
             @Override
-            public String getValue(PeripheralAccess r, Settings s,
-                                   List<PeripheralAccess> d,
-                                   ServiceProvider sp) {
+            public String getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.getMode().toString();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Mode";
             }
         }
 
         private static class ConfidenceColumn extends Column<String> {
             ConfidenceColumn() {
-                super("Confidence");
+                super("Conf.");
             }
 
             @Override
-            public String getValue(PeripheralAccess r, Settings s,
-                                   List<PeripheralAccess> d,
-                                   ServiceProvider sp) {
+            public String getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.getConfidence().toString();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Confidence";
             }
         }
 
         private static class InstrAddrColumn extends Column<Address> {
             InstrAddrColumn() {
-                super("Instruction Address");
+                super("Inst. Addr.");
             }
 
             @Override
-            public Address getValue(PeripheralAccess r, Settings s,
-                                    List<PeripheralAccess> d,
-                                    ServiceProvider sp) {
+            public Address getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.getInstructionAddress();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Instruction Address";
             }
         }
 
         private static class FunctionColumn extends Column<String> {
             FunctionColumn() {
-                super("Function");
+                super("Func.");
             }
 
             @Override
-            public String getValue(PeripheralAccess r, Settings s,
-                                   List<PeripheralAccess> d,
-                                   ServiceProvider sp) {
+            public String getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.getFunctionName();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Function";
             }
         }
 
         private static class InstructionColumn extends Column<String> {
             InstructionColumn() {
-                super("Instruction");
+                super("Instr.");
             }
 
             @Override
-            public String getValue(PeripheralAccess r, Settings s,
-                                   List<PeripheralAccess> d,
-                                   ServiceProvider sp) {
+            public String getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.getInstructionString();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Instruction";
             }
         }
 
         private static class PeriphAddrColumn extends Column<Address> {
             PeriphAddrColumn() {
-                super("Peripheral Address");
+                super("Peri. Addr.");
             }
 
             @Override
-            public Address getValue(PeripheralAccess r, Settings s,
-                                    List<PeripheralAccess> d,
-                                    ServiceProvider sp) {
+            public Address getValue(PeripheralAccess r, Settings s, List<PeripheralAccess> d, ServiceProvider sp) {
                 return r.getPeripheralAddress();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "Peripheral Address";
             }
         }
 
-        /* ---------- Navigation support ---------- */
-
         void installJumpListener(JTable table) {
-
             table.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
