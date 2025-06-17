@@ -14,9 +14,9 @@ import java.util.List;
 
 public class ProgramAnalysisService {
 
-    public List<PeripheralAccess> scanPeripheralAccesses(Program program, TaskMonitor monitor) 
+    public List<PeripheralAccess> scanPeripheralAccesses(Program program, TaskMonitor monitor)
             throws CancelledException {
-        
+
         List<PeripheralAccess> accesses = new ArrayList<>();
         Listing listing = program.getListing();
         long totalInsns = listing.getNumInstructions();
@@ -72,8 +72,8 @@ public class ProgramAnalysisService {
         String fnName = (fn != null) ? fn.getName() : "<GLOBAL>";
 
         return new PeripheralAccess(
-            include, mode, confidence,
-            ins.getAddress(), fnName, ins.toString(), target
+                include, PeripheralAccess.Type.scanned, mode, confidence,
+                ins.getAddress(), fnName, ins.toString(), target
         );
     }
 }

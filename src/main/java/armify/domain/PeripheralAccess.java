@@ -4,12 +4,17 @@ import ghidra.program.model.address.Address;
 
 public class PeripheralAccess implements Comparable<PeripheralAccess> {
     private boolean include;
+    private final Type type;
     private final AccessMode mode;
     private final ConfidenceLevel confidence;
     private final Address instructionAddress;
     private final String functionName;
     private final String instructionString;
     private final Address peripheralAddress;
+
+    public enum Type {
+        scanned, custom
+    }
 
     public enum AccessMode {
         read, write, read_write, unknown
@@ -21,6 +26,7 @@ public class PeripheralAccess implements Comparable<PeripheralAccess> {
 
     public PeripheralAccess(
             boolean include,
+            Type type,
             AccessMode mode,
             ConfidenceLevel confidence,
             Address instructionAddress,
@@ -28,6 +34,7 @@ public class PeripheralAccess implements Comparable<PeripheralAccess> {
             String instructionString,
             Address peripheralAddress) {
         this.include = include;
+        this.type = type;
         this.mode = mode;
         this.confidence = confidence;
         this.instructionAddress = instructionAddress;
@@ -36,13 +43,16 @@ public class PeripheralAccess implements Comparable<PeripheralAccess> {
         this.peripheralAddress = peripheralAddress;
     }
 
-    // Getters
     public boolean isInclude() {
         return include;
     }
 
     public void setInclude(boolean include) {
         this.include = include;
+    }
+
+    public Type getType() {
+        return type;
     }
 
     public AccessMode getMode() {

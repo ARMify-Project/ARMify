@@ -1,6 +1,7 @@
 package armify.persistence;
 
 import armify.domain.PeripheralAccess;
+import armify.domain.PeripheralAccess.Type;
 import armify.domain.PeripheralAccess.AccessMode;
 import armify.domain.PeripheralAccess.ConfidenceLevel;
 import ghidra.program.model.address.Address;
@@ -16,6 +17,7 @@ public class PeripheralAccessSaveable implements Saveable {
 
     /* ---------- persisted fields ---------- */
     private boolean include;
+    private byte typeOrdinal;
     private byte modeOrdinal;
     private byte confidenceOrdinal;
     private long periphOffset;
@@ -32,6 +34,7 @@ public class PeripheralAccessSaveable implements Saveable {
 
     public PeripheralAccessSaveable(PeripheralAccess pa) {
         this.include = pa.isInclude();
+        this.typeOrdinal = (byte) pa.getType().ordinal();
         this.modeOrdinal = (byte) pa.getMode().ordinal();
         this.confidenceOrdinal = (byte) pa.getConfidence().ordinal();
         this.periphOffset = pa.getPeripheralAddress().getOffset();
@@ -51,6 +54,7 @@ public class PeripheralAccessSaveable implements Saveable {
 
         return new PeripheralAccess(
                 include,
+                Type.values()[typeOrdinal],
                 AccessMode.values()[modeOrdinal],
                 ConfidenceLevel.values()[confidenceOrdinal],
                 instr,
@@ -63,6 +67,7 @@ public class PeripheralAccessSaveable implements Saveable {
     @Override
     public void save(ObjectStorage s) {
         s.putBoolean(include);
+        s.putByte(typeOrdinal);
         s.putByte(modeOrdinal);
         s.putByte(confidenceOrdinal);
         s.putLong(periphOffset);
@@ -74,6 +79,7 @@ public class PeripheralAccessSaveable implements Saveable {
     @Override
     public void restore(ObjectStorage s) {
         include = s.getBoolean();
+        typeOrdinal = s.getByte();
         modeOrdinal = s.getByte();
         confidenceOrdinal = s.getByte();
         periphOffset = s.getLong();
@@ -85,7 +91,7 @@ public class PeripheralAccessSaveable implements Saveable {
     @Override
     public Class<?>[] getObjectStorageFields() {
         return new Class<?>[]{
-                boolean.class, byte.class, byte.class,
+                boolean.class, byte.class, byte.class, byte.class,
                 long.class, long.class, String.class, String.class
         };
     }
