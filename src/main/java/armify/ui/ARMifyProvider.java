@@ -3,6 +3,7 @@ package armify.ui;
 import armify.domain.EventBus;
 import armify.services.MatchingEngine;
 import armify.services.ProgramInitializationService;
+import armify.services.ProgramStorageService;
 import armify.ui.components.NavigationTree;
 import armify.ui.events.LocationChangedEvent;
 import armify.ui.events.ViewSelectionEvent;
@@ -34,25 +35,27 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     private final JPanel viewContainer = new JPanel(cardLayout);
     private JPanel rootPanel;
 
-    /* injected services */
+    private final MatchingEngine matchingEngine;
     private final ProgramInitializationService programInitializationService;
+    private final ProgramStorageService programStorageService;
     private final PluginTool tool;
 
-    /* dynamic state */
     private Program currentProgram;
-    private boolean initDone = false;      // per programme
+    private boolean initDone = false;
 
-    /* ------------------------------------------------------------------ */
     public ARMifyProvider(PluginTool tool,
                           String owner,
-                          MatchingEngine eng,
-                          ProgramInitializationService programInitializationService) {
+                          MatchingEngine matchingEngine,
+                          ProgramInitializationService programInitializationService,
+                          ProgramStorageService programStorageService) {
 
         super(tool, "ARMify Plugin", owner);
         this.tool = tool;
+        this.matchingEngine = matchingEngine;
         this.programInitializationService = programInitializationService;
+        this.programStorageService = programStorageService;
 
-        buildUI(eng);
+        buildUI();
         views.values().forEach(v -> v.installListeners(tool, this));
         registerHandlers();
 
@@ -73,14 +76,13 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     private void removeActionsFor(ViewType vt) {
         views.get(vt).getViewActions().forEach(this::removeLocalAction);
     }
-
-    /* UI ---------------------------------------------------------------- */
-    private void buildUI(MatchingEngine eng) {
+    
+    private void buildUI() {
 
         NavigationTree nav = new NavigationTree(eventBus);
 
-        views.put(ViewType.MMIO_ADDRESSES, new MMIOAddressView(eventBus, tool));
-        views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(eng, eventBus));
+        views.put(ViewType.MMIO_ADDRESSES, new MMIOAddressView(programStorageService, eventBus, tool));
+        views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(matchingEngine, eventBus));
 
         for (Map.Entry<ViewType, ViewComponent> e : views.entrySet()) {
             viewContainer.add(e.getValue().getComponent(), e.getKey().name());
@@ -125,27 +127,27 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
     @Override
     public void componentShown() {
-        /* We intercept BEFORE showing any UI */
+        // We intercept BEFORE showing any UI
         if (currentProgram == null) {
             return;
         }
         if (initDone) {
-            super.componentShown();   // normal repaint
+            super.componentShown();
             return;
         }
 
-        /* 1 – immediately hide the placeholder window */
+        // immediately hide the placeholder window
         setVisible(false);
 
-        /* 2 – run initialisation (may pop up dialogs) */
+        // run initialisation (may pop up dialogs)
         boolean ok = programInitializationService.ensureInitialised(tool, currentProgram, eventBus);
 
         if (ok) {
             initDone = true;
-            /* 3 – show the fully prepared provider */
+            // show the fully prepared provider
             setVisible(true);          // triggers a new componentShown()
         }
-        /* if cancelled: remain hidden; user can reopen the menu later */
+        // if cancelled: remain hidden; user can reopen the menu later
     }
 
     @Override

@@ -11,11 +11,6 @@ import ghidra.framework.plugintool.util.PluginStatus;
 import ghidra.program.model.listing.Program;
 import ghidra.program.util.ProgramLocation;
 
-/**
- * Main plugin entry-point.
- * <p>
- * Initialisation is now deferred until the user opens the provider window.
- */
 @PluginInfo(
         status = PluginStatus.RELEASED,
         packageName = ExamplesPluginPackage.NAME,
@@ -41,7 +36,8 @@ public class ARMifyPlugin extends ProgramPlugin {
         ProgramInitializationService programInitializationService =
                 new ProgramInitializationService(programAnalysisService, programStorageService);
 
-        provider = new ARMifyProvider(tool, getName(), matchingEngine, programInitializationService);
+        provider = new ARMifyProvider(
+                tool, getName(), matchingEngine, programInitializationService, programStorageService);
         tool.addComponentProvider(provider, false);
         provider.registerInitialActions();
     }
@@ -49,7 +45,6 @@ public class ARMifyPlugin extends ProgramPlugin {
     /* programme lifecycle ---------------------------------------------- */
     @Override
     protected void programActivated(Program program) {
-
         if (!ProgramValidator.isValid(program)) {
             provider.setProgramReference(null);
             return;

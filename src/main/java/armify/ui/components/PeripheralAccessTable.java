@@ -15,7 +15,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class PeripheralAccessTable extends JPanel {
 
@@ -42,10 +41,6 @@ public class PeripheralAccessTable extends JPanel {
         add(filter, BorderLayout.SOUTH);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Public helpers                                                     */
-    /* ------------------------------------------------------------------ */
-
     public void setData(List<PeripheralAccess> rows) {
         tableModel.setData(rows);
     }
@@ -54,9 +49,41 @@ public class PeripheralAccessTable extends JPanel {
         return table;
     }
 
-    /* ================================================================== */
-    /* Table model (extends GDynamicColumnTableModel for filter support)  */
-    /* ================================================================== */
+    public void addPeripheralAccess(PeripheralAccess pa) {
+        tableModel.addRow(pa);
+        int viewRow = table.convertRowIndexToView(table.getRowCount() - 1);
+        table.getSelectionModel().setSelectionInterval(viewRow, viewRow);
+    }
+
+    public void updatePeripheralAccess(int modelRow, PeripheralAccess pa) {
+        tableModel.updateRow(modelRow, pa);
+    }
+
+    public int getSelectedModelRow() {
+        int viewIdx = table.getSelectedRow();
+        return (viewIdx < 0) ? -1 : table.convertRowIndexToModel(viewIdx);
+    }
+
+    public PeripheralAccess getSelectedEntry() {
+        int modelRow = getSelectedModelRow();
+        return (modelRow < 0) ? null : tableModel.getRowObject(modelRow);
+    }
+
+    public java.util.List<PeripheralAccess> getAllEntries() {
+        return new java.util.ArrayList<>(tableModel.rows);   // defensive copy
+    }
+
+    public void deleteRows(int[] viewRows) {
+        if (viewRows == null || viewRows.length == 0) {
+            return;
+        }
+
+        // convert to model indices
+        int[] modelIdx = java.util.Arrays.stream(viewRows)
+                .map(table::convertRowIndexToModel)
+                .toArray();
+        tableModel.removeRows(modelIdx);
+    }
 
     private static class AccessTableModel
             extends GDynamicColumnTableModel<PeripheralAccess, List<PeripheralAccess>> {
@@ -68,8 +95,6 @@ public class PeripheralAccessTable extends JPanel {
             super(tool);
             this.tool = tool;
         }
-
-        /* ---------- data-set helpers ---------- */
 
         void setData(List<PeripheralAccess> newRows) {
             rows.clear();
@@ -85,7 +110,15 @@ public class PeripheralAccessTable extends JPanel {
             fireTableDataChanged();
         }
 
-        /* ---------- GDynamicColumnTableModel overrides ---------- */
+        void addRow(PeripheralAccess pa) {
+            rows.add(pa);
+            fireTableRowsInserted(rows.size() - 1, rows.size() - 1);
+        }
+
+        void updateRow(int modelRow, PeripheralAccess pa) {
+            rows.set(modelRow, pa);
+            fireTableRowsUpdated(modelRow, modelRow);
+        }
 
         @Override
         public int getRowCount() {
@@ -107,8 +140,6 @@ public class PeripheralAccessTable extends JPanel {
             return "Peripheral Accesses";
         }
 
-        /* ---------- Column definitions ---------- */
-
         @Override
         protected TableColumnDescriptor<PeripheralAccess>
         createTableColumnDescriptor() {
@@ -128,7 +159,6 @@ public class PeripheralAccessTable extends JPanel {
             return d;
         }
 
-        /* Only “Include” is editable */
         @Override
         public boolean isCellEditable(int row, int col) {
             return "Incl.".equals(getColumnName(col));
@@ -142,8 +172,6 @@ public class PeripheralAccessTable extends JPanel {
                 fireTableRowsUpdated(row, row);
             }
         }
-
-        /* ---------- Column classes ---------- */
 
         private abstract static class Column<T>
                 extends AbstractDynamicTableColumn<PeripheralAccess, T, List<PeripheralAccess>> {
@@ -312,40 +340,27 @@ public class PeripheralAccessTable extends JPanel {
             }
         }
 
-        /* ---------- Navigation helper ---------- */
-
         void installJumpListener(JTable table) {
             table.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-
-                    if (SwingUtilities.isRightMouseButton(e) ||
-                            e.getClickCount() != 1) {
-                        return;
+                    if (SwingUtilities.isRightMouseButton(e) || e.getClickCount() != 1) {
+                        return;                                         // ignore right & double clicks
                     }
 
                     int viewRow = table.rowAtPoint(e.getPoint());
                     int viewCol = table.columnAtPoint(e.getPoint());
-                    if (viewRow < 0 || viewCol < 0) {
+                    if (viewRow < 0 || viewCol < 0) {                   // outside table
                         return;
                     }
 
-                    String colName = table.getColumnName(viewCol);
-                    if (!Set.of("Instruction Address", "Instruction",
-                            "Peripheral Address").contains(colName)) {
-                        return;
+                    /* Grab the *displayed* value and navigate only if it's an Address */
+                    Object cellValue = table.getValueAt(viewRow, viewCol);
+                    if (!(cellValue instanceof Address dest)) {
+                        return;                                         // non-address cell
                     }
 
-                    RowObjectTableModel<PeripheralAccess> model = AccessTableModel.this;
-                    PeripheralAccess entry =
-                            model.getRowObject(
-                                    table.convertRowIndexToModel(viewRow));
-
-                    Address dest = "Peripheral Address".equals(colName)
-                            ? entry.getPeripheralAddress()
-                            : entry.getInstructionAddress();
-
-                    goTo(dest);
+                    goTo(dest);                                         // jump in CodeBrowser
                 }
             });
         }
