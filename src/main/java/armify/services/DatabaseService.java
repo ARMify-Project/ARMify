@@ -1,11 +1,18 @@
 package armify.services;
 
 import armify.domain.DeviceCandidate;
+
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 public class DatabaseService {
-    
+    private final Path databasePath;
+
+    public DatabaseService(Path databasePath) {
+        this.databasePath = databasePath;
+    }
+
     public Map<Long, List<AddressHit>> queryAddresses(List<Long> addresses) {
         // TODO: Implement SQLite query against addr2dev table
         // String sql = "SELECT a.addr, a.device_id, a.sig_id FROM addr2dev AS a WHERE a.addr IN (?,?,... LIMIT 200)";
@@ -32,8 +39,16 @@ public class DatabaseService {
             this.signatureId = signatureId;
         }
 
-        public long getAddress() { return address; }
-        public int getDeviceId() { return deviceId; }
-        public int getSignatureId() { return signatureId; }
+        public long getAddress() {
+            return address;
+        }
+
+        public int getDeviceId() {
+            return deviceId;
+        }
+
+        public int getSignatureId() {
+            return signatureId;
+        }
     }
 }
