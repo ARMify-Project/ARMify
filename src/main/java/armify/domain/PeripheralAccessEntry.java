@@ -2,7 +2,7 @@ package armify.domain;
 
 import ghidra.program.model.address.Address;
 
-public class PeripheralAccess implements Comparable<PeripheralAccess> {
+public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> {
     private boolean include;
     private final Type type;
     private final AccessMode mode;
@@ -24,7 +24,7 @@ public class PeripheralAccess implements Comparable<PeripheralAccess> {
         high, medium, low
     }
 
-    public PeripheralAccess(
+    public PeripheralAccessEntry(
             boolean include,
             Type type,
             AccessMode mode,
@@ -80,7 +80,7 @@ public class PeripheralAccess implements Comparable<PeripheralAccess> {
     }
 
     @Override
-    public int compareTo(PeripheralAccess other) {
+    public int compareTo(PeripheralAccessEntry other) {
         return peripheralAddress.compareTo(other.peripheralAddress);
     }
 }

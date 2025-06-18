@@ -1,7 +1,7 @@
 package armify.services;
 
 import armify.domain.EventBus;
-import armify.domain.PeripheralAccess;
+import armify.domain.PeripheralAccessEntry;
 import docking.widgets.OptionDialog;
 import ghidra.app.plugin.core.analysis.AutoAnalysisManager;
 import ghidra.app.util.MemoryBlockUtils;
@@ -59,14 +59,14 @@ public class ProgramInitializationService {
         }
 
         // Not the first run of the plugin
-        List<PeripheralAccess> accesses = storage.loadMMIOAddresses(program);
+        List<PeripheralAccessEntry> accesses = storage.loadMMIOAddresses(program);
         eventBus.publish(new armify.ui.events.AnalysisCompleteEvent(accesses));
 
         return true;
     }
 
     private boolean handleFirstRun(PluginTool tool, Program program, EventBus eventBus) {
-        List<PeripheralAccess> accesses;
+        List<PeripheralAccessEntry> accesses;
         long stack_pointer;
         long reset_vector;
 

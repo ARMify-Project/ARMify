@@ -1,9 +1,9 @@
 package armify.persistence;
 
-import armify.domain.PeripheralAccess;
-import armify.domain.PeripheralAccess.Type;
-import armify.domain.PeripheralAccess.AccessMode;
-import armify.domain.PeripheralAccess.ConfidenceLevel;
+import armify.domain.PeripheralAccessEntry;
+import armify.domain.PeripheralAccessEntry.Type;
+import armify.domain.PeripheralAccessEntry.AccessMode;
+import armify.domain.PeripheralAccessEntry.ConfidenceLevel;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressSpace;
 import ghidra.program.model.listing.Program;
@@ -11,7 +11,7 @@ import ghidra.util.ObjectStorage;
 import ghidra.util.Saveable;
 
 /**
- * Serialisable wrapper around {@link PeripheralAccess}.
+ * Serialisable wrapper around {@link PeripheralAccessEntry}.
  */
 public class PeripheralAccessSaveable implements Saveable {
 
@@ -32,7 +32,7 @@ public class PeripheralAccessSaveable implements Saveable {
     public PeripheralAccessSaveable() {
     }
 
-    public PeripheralAccessSaveable(PeripheralAccess pa) {
+    public PeripheralAccessSaveable(PeripheralAccessEntry pa) {
         this.include = pa.isInclude();
         this.typeOrdinal = (byte) pa.getType().ordinal();
         this.modeOrdinal = (byte) pa.getMode().ordinal();
@@ -45,14 +45,14 @@ public class PeripheralAccessSaveable implements Saveable {
     }
 
     /* ---------- re-materialise ---------- */
-    public PeripheralAccess toPeripheralAccess(Program prog) {
+    public PeripheralAccessEntry toPeripheralAccess(Program prog) {
 
         AddressSpace space = prog.getAddressFactory().getDefaultAddressSpace();
         Address periph = space.getAddress(periphOffset);
         Address instr = (instrOffset == NULL_SENTINEL)
                 ? null : space.getAddress(instrOffset);
 
-        return new PeripheralAccess(
+        return new PeripheralAccessEntry(
                 include,
                 Type.values()[typeOrdinal],
                 AccessMode.values()[modeOrdinal],
