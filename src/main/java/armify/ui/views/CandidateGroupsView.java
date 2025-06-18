@@ -50,15 +50,15 @@ public class CandidateGroupsView implements ViewComponent {
 
     private void initializeUI() {
         // Create main layout
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 
-        // Left side - address table
-        JPanel leftPanel = new JPanel(new BorderLayout());
-        leftPanel.setBorder(BorderFactory.createTitledBorder("Selected Addresses"));
-        leftPanel.add(new JLabel("Address table (TODO)", SwingConstants.CENTER), BorderLayout.CENTER);
+        // Top side - address table
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBorder(BorderFactory.createTitledBorder("Included Register Addresses"));
+        topPanel.add(new JLabel("Address table (TODO)", SwingConstants.CENTER), BorderLayout.CENTER);
 
-        // Right side - controls and group tree
-        JPanel rightPanel = new JPanel(new BorderLayout());
+        // Bottom side - controls and group tree
+        JPanel bottomPanel = new JPanel(new BorderLayout());
 
         // Group tree
         JPanel treePanel = new JPanel(new BorderLayout());
@@ -68,11 +68,11 @@ public class CandidateGroupsView implements ViewComponent {
         // Controls
         JPanel controlPanel = createControlPanel();
 
-        rightPanel.add(treePanel, BorderLayout.CENTER);
-        rightPanel.add(controlPanel, BorderLayout.SOUTH);
+        bottomPanel.add(treePanel, BorderLayout.CENTER);
+        bottomPanel.add(controlPanel, BorderLayout.SOUTH);
 
-        splitPane.setLeftComponent(leftPanel);
-        splitPane.setRightComponent(rightPanel);
+        splitPane.setTopComponent(topPanel);
+        splitPane.setBottomComponent(bottomPanel);
         splitPane.setDividerLocation(400);
 
         mainPanel.add(splitPane, BorderLayout.CENTER);
