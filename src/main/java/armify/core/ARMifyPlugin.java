@@ -11,6 +11,8 @@ import ghidra.framework.plugintool.util.PluginStatus;
 import ghidra.program.model.listing.Program;
 import ghidra.program.util.ProgramLocation;
 
+import java.nio.file.Path;
+
 @PluginInfo(
         status = PluginStatus.RELEASED,
         packageName = ExamplesPluginPackage.NAME,
@@ -28,7 +30,8 @@ public class ARMifyPlugin extends ProgramPlugin {
         /* shared, stateless helpers ------------------------------------ */
         ProgramStorageService programStorageService = new ProgramStorageService();
 
-        DatabaseService databaseService = new DatabaseService();
+        Path databasePath = DatabaseLocator.resolveOrExtract();
+        DatabaseService databaseService = new DatabaseService(databasePath);
         DeviceGroupingService deviceGroupingService = new DeviceGroupingService(databaseService);
         MatchingEngine matchingEngine = new MatchingEngine(databaseService, deviceGroupingService);
 
