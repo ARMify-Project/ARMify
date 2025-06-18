@@ -1,8 +1,8 @@
 package armify.ui.components;
 
-import armify.domain.PeripheralAccessEntry;
-import armify.domain.PeripheralAccessEntry.AccessMode;
-import armify.domain.PeripheralAccessEntry.ConfidenceLevel;
+import armify.domain.MMIOAccessEntry;
+import armify.domain.MMIOAccessEntry.AccessMode;
+import armify.domain.MMIOAccessEntry.ConfidenceLevel;
 import docking.DialogComponentProvider;
 import ghidra.app.services.CodeViewerService;
 import ghidra.app.util.AddressInput;
@@ -18,32 +18,32 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
-public class AddPeripheralAccessDialog extends DialogComponentProvider {
+public class AddMMIOAccessDialog extends DialogComponentProvider {
     private final PluginTool tool;
     private final Program program;
-    private final Consumer<PeripheralAccessEntry> onAccept;
+    private final Consumer<MMIOAccessEntry> onAccept;
 
     private final JCheckBox includeCheck = new JCheckBox();
     private final JComboBox<AccessMode> modeCombo = new JComboBox<>(AccessMode.values());
     private final JComboBox<ConfidenceLevel> confCombo = new JComboBox<>(ConfidenceLevel.values());
     private final AddressInput instrAddrInput = new AddressInput();
-    private final AddressInput periphAddrInput = new AddressInput();
+    private final AddressInput registerAddrInput = new AddressInput();
     private final JButton instrPickBtn = makePickButton(instrAddrInput);
-    private final JButton periphPickBtn = makePickButton(periphAddrInput);
+    private final JButton registerPickBtn = makePickButton(registerAddrInput);
 
     private static final long PERIPH_MIN = 0x4000_0000L;
     private static final long PERIPH_MAX = 0x5FFF_FFFFL;
 
-    public AddPeripheralAccessDialog(
-            PluginTool tool, Program program, PeripheralAccessEntry initialRow, Consumer<PeripheralAccessEntry> onAccept) {
-        super((initialRow == null) ? "Add Peripheral Access" : "Edit Peripheral Access",
+    public AddMMIOAccessDialog(
+            PluginTool tool, Program program, MMIOAccessEntry initialRow, Consumer<MMIOAccessEntry> onAccept) {
+        super((initialRow == null) ? "Add Register Access" : "Edit Register Access",
                 false, true, true, false);
         this.tool = tool;
         this.program = program;
         this.onAccept = onAccept;
 
         instrAddrInput.setProgram(program);
-        periphAddrInput.setProgram(program);
+        registerAddrInput.setProgram(program);
 
         if (initialRow != null) {
             includeCheck.setSelected(initialRow.isInclude());
@@ -52,7 +52,7 @@ public class AddPeripheralAccessDialog extends DialogComponentProvider {
             if (initialRow.getInstructionAddress() != null) {
                 instrAddrInput.setAddress(initialRow.getInstructionAddress());
             }
-            periphAddrInput.setAddress(initialRow.getPeripheralAddress());
+            registerAddrInput.setAddress(initialRow.getRegisterAddress());
         } else {
             includeCheck.setSelected(true);
             confCombo.setSelectedItem(ConfidenceLevel.high);
@@ -70,20 +70,20 @@ public class AddPeripheralAccessDialog extends DialogComponentProvider {
         String functionName = "";
         String instrString = "";
 
-        if (!periphAddrInput.hasInput()) {
-            setStatusText("Peripheral address is mandatory");
+        if (!registerAddrInput.hasInput()) {
+            setStatusText("Register address is mandatory");
             return;
         }
 
-        Address periphAddress = periphAddrInput.getAddress();
+        Address periphAddress = registerAddrInput.getAddress();
         if (periphAddress == null) {
-            setStatusText("Peripheral address is not a valid address");
+            setStatusText("Register address is not a valid address");
             return;
         }
 
         long addrOff = periphAddress.getOffset();
         if (addrOff < PERIPH_MIN || addrOff > PERIPH_MAX) {
-            setStatusText("Peripheral address must be in 0x4000_0000 – 0x5FFF_FFFF");
+            setStatusText("Register address must be in 0x4000_0000 – 0x5FFF_FFFF");
             return;
         }
 
@@ -112,15 +112,15 @@ public class AddPeripheralAccessDialog extends DialogComponentProvider {
             }
         }
 
-        PeripheralAccessEntry pa = new PeripheralAccessEntry(
+        MMIOAccessEntry pa = new MMIOAccessEntry(
                 includeCheck.isSelected(),
-                PeripheralAccessEntry.Type.custom,
+                MMIOAccessEntry.Type.custom,
                 (AccessMode) modeCombo.getSelectedItem(),
                 (ConfidenceLevel) confCombo.getSelectedItem(),
                 instrAddr,
                 functionName,
                 instrString,
-                periphAddrInput.getAddress());
+                registerAddrInput.getAddress());
 
         onAccept.accept(pa);
         close();
@@ -204,21 +204,21 @@ public class AddPeripheralAccessDialog extends DialogComponentProvider {
         g.fill = GridBagConstraints.NONE;
         p.add(instrPickBtn, g);
 
-        /* ---------- Peripheral Address + pick ---------- */
+        /* ---------- Register Address + pick ---------- */
         row++;
         g.gridx = 0;
         g.gridy = row;
-        p.add(new JLabel("Peripheral Address:"), g);
+        p.add(new JLabel("Register Address:"), g);
         g.gridx = 1;
         g.gridwidth = 2;
         g.fill = GridBagConstraints.HORIZONTAL;
         g.weightx = 1.0;
-        p.add(periphAddrInput, g);
+        p.add(registerAddrInput, g);
         g.gridx = 3;
         g.gridwidth = 1;
         g.weightx = 0;
         g.fill = GridBagConstraints.NONE;
-        p.add(periphPickBtn, g);
+        p.add(registerPickBtn, g);
 
         return p;
     }

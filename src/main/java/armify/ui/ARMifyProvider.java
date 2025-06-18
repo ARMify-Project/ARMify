@@ -30,7 +30,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
     private final EventBus eventBus = new EventBus();
     private final Map<ViewType, ViewComponent> views = new EnumMap<>(ViewType.class);
-    private ViewType currentView = ViewType.MMIO_ADDRESSES;
+    private ViewType currentView = ViewType.MMIO_ACCESSES;
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel viewContainer = new JPanel(cardLayout);
@@ -86,16 +86,16 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         NavigationTree nav = new NavigationTree(eventBus);
 
         views.put(
-                ViewType.MMIO_ADDRESSES,
-                new MMIOAddressView(programStorageService, programAnalysisService, eventBus, tool)
+                ViewType.MMIO_ACCESSES,
+                new MMIOAccessesView(programStorageService, programAnalysisService, eventBus, tool)
         );
         views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(matchingEngine, eventBus));
 
         for (Map.Entry<ViewType, ViewComponent> e : views.entrySet()) {
             viewContainer.add(e.getValue().getComponent(), e.getKey().name());
         }
-        cardLayout.show(viewContainer, ViewType.MMIO_ADDRESSES.name());
-        nav.selectView(ViewType.MMIO_ADDRESSES);
+        cardLayout.show(viewContainer, ViewType.MMIO_ACCESSES.name());
+        nav.selectView(ViewType.MMIO_ACCESSES);
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 nav.getComponent(),

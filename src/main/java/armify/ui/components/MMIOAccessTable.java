@@ -1,6 +1,6 @@
 package armify.ui.components;
 
-import armify.domain.PeripheralAccessEntry;
+import armify.domain.MMIOAccessEntry;
 import docking.widgets.table.*;
 import ghidra.app.services.GoToService;
 import ghidra.docking.settings.Settings;
@@ -16,12 +16,12 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PeripheralAccessTable extends JPanel {
+public class MMIOAccessTable extends JPanel {
 
     private final AccessTableModel tableModel;
     private final GTable table;
 
-    public PeripheralAccessTable(PluginTool tool) {
+    public MMIOAccessTable(PluginTool tool) {
         super(new BorderLayout());
 
         tableModel = new AccessTableModel(tool);
@@ -36,12 +36,12 @@ public class PeripheralAccessTable extends JPanel {
 
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        GTableFilterPanel<PeripheralAccessEntry> filter =
+        GTableFilterPanel<MMIOAccessEntry> filter =
                 new GTableFilterPanel<>(table, tableModel);
         add(filter, BorderLayout.SOUTH);
     }
 
-    public void setData(List<PeripheralAccessEntry> rows) {
+    public void setData(List<MMIOAccessEntry> rows) {
         tableModel.setData(rows);
     }
 
@@ -49,13 +49,13 @@ public class PeripheralAccessTable extends JPanel {
         return table;
     }
 
-    public void addPeripheralAccess(PeripheralAccessEntry pa) {
+    public void addMMIOAccess(MMIOAccessEntry pa) {
         tableModel.addRow(pa);
         int viewRow = table.convertRowIndexToView(table.getRowCount() - 1);
         table.getSelectionModel().setSelectionInterval(viewRow, viewRow);
     }
 
-    public void updatePeripheralAccess(int modelRow, PeripheralAccessEntry pa) {
+    public void updateMMIOAccess(int modelRow, MMIOAccessEntry pa) {
         tableModel.updateRow(modelRow, pa);
     }
 
@@ -64,12 +64,12 @@ public class PeripheralAccessTable extends JPanel {
         return (viewIdx < 0) ? -1 : table.convertRowIndexToModel(viewIdx);
     }
 
-    public PeripheralAccessEntry getSelectedEntry() {
+    public MMIOAccessEntry getSelectedEntry() {
         int modelRow = getSelectedModelRow();
         return (modelRow < 0) ? null : tableModel.getRowObject(modelRow);
     }
 
-    public java.util.List<PeripheralAccessEntry> getAllEntries() {
+    public java.util.List<MMIOAccessEntry> getAllEntries() {
         return new java.util.ArrayList<>(tableModel.rows);   // defensive copy
     }
 
@@ -86,9 +86,9 @@ public class PeripheralAccessTable extends JPanel {
     }
 
     private static class AccessTableModel
-            extends GDynamicColumnTableModel<PeripheralAccessEntry, List<PeripheralAccessEntry>> {
+            extends GDynamicColumnTableModel<MMIOAccessEntry, List<MMIOAccessEntry>> {
 
-        private final List<PeripheralAccessEntry> rows = new ArrayList<>();
+        private final List<MMIOAccessEntry> rows = new ArrayList<>();
         private final PluginTool tool;
 
         AccessTableModel(PluginTool tool) {
@@ -96,7 +96,7 @@ public class PeripheralAccessTable extends JPanel {
             this.tool = tool;
         }
 
-        void setData(List<PeripheralAccessEntry> newRows) {
+        void setData(List<MMIOAccessEntry> newRows) {
             rows.clear();
             rows.addAll(newRows);
             fireTableDataChanged();
@@ -110,12 +110,12 @@ public class PeripheralAccessTable extends JPanel {
             fireTableDataChanged();
         }
 
-        void addRow(PeripheralAccessEntry pa) {
+        void addRow(MMIOAccessEntry pa) {
             rows.add(pa);
             fireTableRowsInserted(rows.size() - 1, rows.size() - 1);
         }
 
-        void updateRow(int modelRow, PeripheralAccessEntry pa) {
+        void updateRow(int modelRow, MMIOAccessEntry pa) {
             rows.set(modelRow, pa);
             fireTableRowsUpdated(modelRow, modelRow);
         }
@@ -126,25 +126,25 @@ public class PeripheralAccessTable extends JPanel {
         }
 
         @Override
-        public List<PeripheralAccessEntry> getModelData() {
+        public List<MMIOAccessEntry> getModelData() {
             return rows;
         }
 
         @Override
-        public List<PeripheralAccessEntry> getDataSource() {
+        public List<MMIOAccessEntry> getDataSource() {
             return rows;
         }
 
         @Override
         public String getName() {
-            return "Peripheral Accesses";
+            return "MMIO Accesses";
         }
 
         @Override
-        protected TableColumnDescriptor<PeripheralAccessEntry>
+        protected TableColumnDescriptor<MMIOAccessEntry>
         createTableColumnDescriptor() {
 
-            TableColumnDescriptor<PeripheralAccessEntry> d =
+            TableColumnDescriptor<MMIOAccessEntry> d =
                     new TableColumnDescriptor<>();
 
             d.addVisibleColumn(new IncludeColumn());
@@ -155,7 +155,7 @@ public class PeripheralAccessTable extends JPanel {
             d.addVisibleColumn(new InstrAddrColumn());
             d.addVisibleColumn(new FunctionColumn());
             d.addVisibleColumn(new InstructionColumn());
-            d.addVisibleColumn(new PeriphAddrColumn());
+            d.addVisibleColumn(new RegisterAddrColumn());
             return d;
         }
 
@@ -174,7 +174,7 @@ public class PeripheralAccessTable extends JPanel {
         }
 
         private abstract static class Column<T>
-                extends AbstractDynamicTableColumn<PeripheralAccessEntry, T, List<PeripheralAccessEntry>> {
+                extends AbstractDynamicTableColumn<MMIOAccessEntry, T, List<MMIOAccessEntry>> {
             private final String name;
 
             Column(String name) {
@@ -193,8 +193,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public Boolean getValue(PeripheralAccessEntry r, Settings s,
-                                    List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public Boolean getValue(MMIOAccessEntry r, Settings s,
+                                    List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.isInclude();
             }
 
@@ -210,8 +210,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public String getValue(PeripheralAccessEntry r, Settings s,
-                                   List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public String getValue(MMIOAccessEntry r, Settings s,
+                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.isInclude() ? "0" : "";
             }
 
@@ -227,8 +227,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public String getValue(PeripheralAccessEntry r, Settings s,
-                                   List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public String getValue(MMIOAccessEntry r, Settings s,
+                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.getType().toString();
             }
 
@@ -244,8 +244,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public String getValue(PeripheralAccessEntry r, Settings s,
-                                   List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public String getValue(MMIOAccessEntry r, Settings s,
+                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.getMode().toString();
             }
 
@@ -261,8 +261,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public String getValue(PeripheralAccessEntry r, Settings s,
-                                   List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public String getValue(MMIOAccessEntry r, Settings s,
+                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.getConfidence().toString();
             }
 
@@ -278,8 +278,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public Address getValue(PeripheralAccessEntry r, Settings s,
-                                    List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public Address getValue(MMIOAccessEntry r, Settings s,
+                                    List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.getInstructionAddress();
             }
 
@@ -295,8 +295,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public String getValue(PeripheralAccessEntry r, Settings s,
-                                   List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public String getValue(MMIOAccessEntry r, Settings s,
+                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.getFunctionName();
             }
 
@@ -312,8 +312,8 @@ public class PeripheralAccessTable extends JPanel {
             }
 
             @Override
-            public String getValue(PeripheralAccessEntry r, Settings s,
-                                   List<PeripheralAccessEntry> d, ServiceProvider sp) {
+            public String getValue(MMIOAccessEntry r, Settings s,
+                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
                 return r.getInstructionString();
             }
 
@@ -323,20 +323,20 @@ public class PeripheralAccessTable extends JPanel {
             }
         }
 
-        private static class PeriphAddrColumn extends Column<Address> {
-            PeriphAddrColumn() {
-                super("Peri. Addr.");
+        private static class RegisterAddrColumn extends Column<Address> {
+            RegisterAddrColumn() {
+                super("Reg. Addr.");
             }
 
             @Override
-            public Address getValue(PeripheralAccessEntry r, Settings s,
-                                    List<PeripheralAccessEntry> d, ServiceProvider sp) {
-                return r.getPeripheralAddress();
+            public Address getValue(MMIOAccessEntry r, Settings s,
+                                    List<MMIOAccessEntry> d, ServiceProvider sp) {
+                return r.getRegisterAddress();
             }
 
             @Override
             public String getColumnDescription() {
-                return "Peripheral Address";
+                return "Register Address";
             }
         }
 

@@ -1,11 +1,11 @@
 package armify.ui.views;
 
 import armify.domain.EventBus;
-import armify.domain.PeripheralAccessEntry;
+import armify.domain.MMIOAccessEntry;
 import armify.services.ProgramAnalysisService;
 import armify.services.ProgramStorageService;
-import armify.ui.components.AddPeripheralAccessDialog;
-import armify.ui.components.PeripheralAccessTable;
+import armify.ui.components.AddMMIOAccessDialog;
+import armify.ui.components.MMIOAccessTable;
 import armify.ui.events.AnalysisCompleteEvent;
 import docking.ActionContext;
 import docking.action.DockingAction;
@@ -26,24 +26,24 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MMIOAddressView implements ViewComponent {
+public class MMIOAccessesView implements ViewComponent {
     private final ProgramStorageService storageService;
     private final ProgramAnalysisService analysisService;
     private final EventBus eventBus;
     private final PluginTool tool;
     private final List<DockingAction> actions = new ArrayList<>();
     private final JPanel mainPanel;
-    private final PeripheralAccessTable accessTable;
+    private final MMIOAccessTable accessTable;
     private static final Icon EDIT_ICON = ResourceManager.loadImage("images/edit.gif");
 
-    public MMIOAddressView(ProgramStorageService programStorageService, ProgramAnalysisService analysisService,
-                           EventBus eventBus, PluginTool tool) {
+    public MMIOAccessesView(ProgramStorageService programStorageService, ProgramAnalysisService analysisService,
+                            EventBus eventBus, PluginTool tool) {
         this.storageService = programStorageService;
         this.analysisService = analysisService;
         this.eventBus = eventBus;
         this.tool = tool;
 
-        accessTable = new PeripheralAccessTable(tool);
+        accessTable = new MMIOAccessTable(tool);
 
         mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(accessTable, BorderLayout.CENTER);
@@ -73,7 +73,7 @@ public class MMIOAddressView implements ViewComponent {
                 String message =
                         """
                                 This will…
-                                • delete all currently *scanned* peripheral-access rows
+                                • delete all *scanned* MMIO-access rows
                                 • keep your *custom* rows
                                 • run a full rescan of the program, which can take some time
                                 
@@ -81,21 +81,21 @@ public class MMIOAddressView implements ViewComponent {
 
                 int choice = OptionDialog.showYesNoDialog(
                         tool.getActiveWindow(),
-                        "ARMify – Rescan Peripheral Accesses", message);
+                        "ARMify – Rescan Register Accesses", message);
 
                 if (choice != OptionDialog.YES_OPTION) {
                     return;
                 }
 
                 // get custom entries
-                List<PeripheralAccessEntry> customAccesses = accessTable.getAllEntries().stream()
-                        .filter(pa -> pa.getType() == PeripheralAccessEntry.Type.custom)
+                List<MMIOAccessEntry> customAccesses = accessTable.getAllEntries().stream()
+                        .filter(pa -> pa.getType() == MMIOAccessEntry.Type.custom)
                         .toList();
 
                 // run analysis service
-                List<PeripheralAccessEntry> scannedAccesses;
+                List<MMIOAccessEntry> scannedAccesses;
                 try {
-                    scannedAccesses = analysisService.scanPeripheralAccesses(program, TaskMonitor.DUMMY);
+                    scannedAccesses = analysisService.scanMMIOAccesses(program, TaskMonitor.DUMMY);
                 } catch (CancelledException e) {
                     Msg.showInfo(this, null, "ARMify",
                             "Scan cancelled, table left unchanged.");
@@ -103,12 +103,12 @@ public class MMIOAddressView implements ViewComponent {
                 }
 
                 // merge lists
-                List<PeripheralAccessEntry> mergedAccesses = new ArrayList<>(customAccesses);
+                List<MMIOAccessEntry> mergedAccesses = new ArrayList<>(customAccesses);
                 mergedAccesses.addAll(scannedAccesses);
 
                 // update gui and store
                 accessTable.setData(mergedAccesses);
-                storageService.saveMMIOAddresses(program, mergedAccesses);
+                storageService.saveMMIOAccesses(program, mergedAccesses);
             }
         };
         refresh.setToolBarData(new ToolBarData(Icons.REFRESH_ICON, "0ARMify"));
@@ -125,12 +125,12 @@ public class MMIOAddressView implements ViewComponent {
                     return;
                 }
 
-                AddPeripheralAccessDialog dlg = new AddPeripheralAccessDialog(
+                AddMMIOAccessDialog dlg = new AddMMIOAccessDialog(
                         tool,
                         program,
                         null,
                         pa -> {
-                            accessTable.addPeripheralAccess(pa);
+                            accessTable.addMMIOAccess(pa);
                             persist(program);
                         }
                 );
@@ -152,17 +152,17 @@ public class MMIOAddressView implements ViewComponent {
                     return;
                 }
                 int modelRow = accessTable.getSelectedModelRow();
-                PeripheralAccessEntry selected = accessTable.getSelectedEntry();
-                if (selected == null || selected.getType() != PeripheralAccessEntry.Type.custom) {
+                MMIOAccessEntry selected = accessTable.getSelectedEntry();
+                if (selected == null || selected.getType() != MMIOAccessEntry.Type.custom) {
                     return;
                 }
 
-                AddPeripheralAccessDialog dlg = new AddPeripheralAccessDialog(
+                AddMMIOAccessDialog dlg = new AddMMIOAccessDialog(
                         tool,
                         program,
                         selected,
                         pa -> {
-                            accessTable.updatePeripheralAccess(modelRow, pa);
+                            accessTable.updateMMIOAccess(modelRow, pa);
                             persist(program);
                         }
                 );
@@ -172,8 +172,8 @@ public class MMIOAddressView implements ViewComponent {
 
             @Override
             public boolean isEnabledForContext(ActionContext c) {
-                PeripheralAccessEntry sel = accessTable.getSelectedEntry();
-                return sel != null && sel.getType() == PeripheralAccessEntry.Type.custom
+                MMIOAccessEntry sel = accessTable.getSelectedEntry();
+                return sel != null && sel.getType() == MMIOAccessEntry.Type.custom
                         && accessTable.getTable().getSelectedRowCount() == 1;
             }
         };
@@ -232,7 +232,7 @@ public class MMIOAddressView implements ViewComponent {
     }
 
     private void persist(Program program) {
-        storageService.saveMMIOAddresses(program, accessTable.getAllEntries());
+        storageService.saveMMIOAccesses(program, accessTable.getAllEntries());
     }
 
     @Override

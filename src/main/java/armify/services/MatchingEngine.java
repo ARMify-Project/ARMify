@@ -29,12 +29,12 @@ public class MatchingEngine {
      * @param accesses  full list coming from the disassembly scan
      * @param tolerance k – maximum #misses a device may have
      */
-    public MatchResult findCandidates(List<PeripheralAccessEntry> accesses, int tolerance) {
+    public MatchResult findCandidates(List<MMIOAccessEntry> accesses, int tolerance) {
 
         /* 1. Collect the (unique) addresses the user included in the search. */
         List<Long> selectedAddresses = accesses.stream()
-                .filter(PeripheralAccessEntry::isInclude)
-                .map(a -> a.getPeripheralAddress().getOffset())
+                .filter(MMIOAccessEntry::isInclude)
+                .map(a -> a.getRegisterAddress().getOffset())
                 .distinct()
                 .toList();
 

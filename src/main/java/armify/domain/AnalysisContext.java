@@ -8,15 +8,15 @@ import java.util.List;
 public class AnalysisContext {
     private final Program program;
     private final ProgramLocation location;
-    private final List<PeripheralAccessEntry> peripheralAccessEntries;
+    private final List<MMIOAccessEntry> mmioAccessEntries;
     private final int tolerance;
 
     public AnalysisContext(
-            Program program, ProgramLocation location, List<PeripheralAccessEntry> peripheralAccessEntries, int tolerance
+            Program program, ProgramLocation location, List<MMIOAccessEntry> mmioAccessEntries, int tolerance
     ) {
         this.program = program;
         this.location = location;
-        this.peripheralAccessEntries = List.copyOf(peripheralAccessEntries);
+        this.mmioAccessEntries = List.copyOf(mmioAccessEntries);
         this.tolerance = tolerance;
     }
 
@@ -28,8 +28,8 @@ public class AnalysisContext {
         return location;
     }
 
-    public List<PeripheralAccessEntry> getPeripheralAccesses() {
-        return peripheralAccessEntries;
+    public List<MMIOAccessEntry> getMMIOAccesses() {
+        return mmioAccessEntries;
     }
 
     public int getTolerance() {

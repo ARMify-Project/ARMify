@@ -73,7 +73,7 @@ public class RegisterTable extends JPanel {
 
         @Override
         public String getName() {
-            return "Peripheral Grouped";
+            return "Register Grouped";
         }
 
         @Override
