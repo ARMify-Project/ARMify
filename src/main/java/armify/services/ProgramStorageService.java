@@ -1,6 +1,6 @@
 package armify.services;
 
-import armify.domain.PeripheralAccess;
+import armify.domain.PeripheralAccessEntry;
 import armify.persistence.PeripheralAccessSaveable;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressIterator;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Persistence helper – stores full {@link PeripheralAccess} via an
+ * Persistence helper – stores full {@link PeripheralAccessEntry} via an
  * {@link ObjectPropertyMap}.
  */
 public class ProgramStorageService {
@@ -46,7 +46,7 @@ public class ProgramStorageService {
     /* MMIO objects                                                       */
     /* ------------------------------------------------------------------ */
 
-    public void saveMMIOAddresses(Program prog, List<PeripheralAccess> list) {
+    public void saveMMIOAddresses(Program prog, List<PeripheralAccessEntry> list) {
 
         int tx = prog.startTransaction("ARMify – save MMIO objects");
         boolean commit = false;
@@ -59,7 +59,7 @@ public class ProgramStorageService {
                     pm.createObjectPropertyMap(
                             PROP_MMIO_OBJ, PeripheralAccessSaveable.class);
 
-            for (PeripheralAccess pa : list) {
+            for (PeripheralAccessEntry pa : list) {
                 map.add(pa.getPeripheralAddress(),
                         new PeripheralAccessSaveable(pa));
             }
@@ -72,9 +72,9 @@ public class ProgramStorageService {
     }
 
     @SuppressWarnings("unchecked")
-    public List<PeripheralAccess> loadMMIOAddresses(Program prog) {
+    public List<PeripheralAccessEntry> loadMMIOAddresses(Program prog) {
 
-        List<PeripheralAccess> out = new ArrayList<>();
+        List<PeripheralAccessEntry> out = new ArrayList<>();
 
         ObjectPropertyMap<?> raw =
                 prog.getUsrPropertyManager().getObjectPropertyMap(PROP_MMIO_OBJ);

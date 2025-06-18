@@ -3,7 +3,6 @@ package armify.services;
 import armify.domain.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Glue code that turns raw MMIO touches into candidate devices and groups.
@@ -30,11 +29,11 @@ public class MatchingEngine {
      * @param accesses  full list coming from the disassembly scan
      * @param tolerance k – maximum #misses a device may have
      */
-    public MatchResult findCandidates(List<PeripheralAccess> accesses, int tolerance) {
+    public MatchResult findCandidates(List<PeripheralAccessEntry> accesses, int tolerance) {
 
         /* 1. Collect the (unique) addresses the user included in the search. */
         List<Long> selectedAddresses = accesses.stream()
-                .filter(PeripheralAccess::isInclude)
+                .filter(PeripheralAccessEntry::isInclude)
                 .map(a -> a.getPeripheralAddress().getOffset())
                 .distinct()
                 .toList();

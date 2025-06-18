@@ -1,7 +1,7 @@
 package armify.ui.views;
 
 import armify.domain.EventBus;
-import armify.domain.PeripheralAccess;
+import armify.domain.PeripheralAccessEntry;
 import armify.services.ProgramAnalysisService;
 import armify.services.ProgramStorageService;
 import armify.ui.components.AddPeripheralAccessDialog;
@@ -88,12 +88,12 @@ public class MMIOAddressView implements ViewComponent {
                 }
 
                 // get custom entries
-                List<PeripheralAccess> customAccesses = accessTable.getAllEntries().stream()
-                        .filter(pa -> pa.getType() == PeripheralAccess.Type.custom)
+                List<PeripheralAccessEntry> customAccesses = accessTable.getAllEntries().stream()
+                        .filter(pa -> pa.getType() == PeripheralAccessEntry.Type.custom)
                         .toList();
 
                 // run analysis service
-                List<PeripheralAccess> scannedAccesses;
+                List<PeripheralAccessEntry> scannedAccesses;
                 try {
                     scannedAccesses = analysisService.scanPeripheralAccesses(program, TaskMonitor.DUMMY);
                 } catch (CancelledException e) {
@@ -103,7 +103,7 @@ public class MMIOAddressView implements ViewComponent {
                 }
 
                 // merge lists
-                List<PeripheralAccess> mergedAccesses = new ArrayList<>(customAccesses);
+                List<PeripheralAccessEntry> mergedAccesses = new ArrayList<>(customAccesses);
                 mergedAccesses.addAll(scannedAccesses);
 
                 // update gui and store
@@ -152,8 +152,8 @@ public class MMIOAddressView implements ViewComponent {
                     return;
                 }
                 int modelRow = accessTable.getSelectedModelRow();
-                PeripheralAccess selected = accessTable.getSelectedEntry();
-                if (selected == null || selected.getType() != PeripheralAccess.Type.custom) {
+                PeripheralAccessEntry selected = accessTable.getSelectedEntry();
+                if (selected == null || selected.getType() != PeripheralAccessEntry.Type.custom) {
                     return;
                 }
 
@@ -172,8 +172,8 @@ public class MMIOAddressView implements ViewComponent {
 
             @Override
             public boolean isEnabledForContext(ActionContext c) {
-                PeripheralAccess sel = accessTable.getSelectedEntry();
-                return sel != null && sel.getType() == PeripheralAccess.Type.custom
+                PeripheralAccessEntry sel = accessTable.getSelectedEntry();
+                return sel != null && sel.getType() == PeripheralAccessEntry.Type.custom
                         && accessTable.getTable().getSelectedRowCount() == 1;
             }
         };

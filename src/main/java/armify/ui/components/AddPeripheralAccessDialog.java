@@ -1,8 +1,8 @@
 package armify.ui.components;
 
-import armify.domain.PeripheralAccess;
-import armify.domain.PeripheralAccess.AccessMode;
-import armify.domain.PeripheralAccess.ConfidenceLevel;
+import armify.domain.PeripheralAccessEntry;
+import armify.domain.PeripheralAccessEntry.AccessMode;
+import armify.domain.PeripheralAccessEntry.ConfidenceLevel;
 import docking.DialogComponentProvider;
 import ghidra.app.services.CodeViewerService;
 import ghidra.app.util.AddressInput;
@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 public class AddPeripheralAccessDialog extends DialogComponentProvider {
     private final PluginTool tool;
     private final Program program;
-    private final Consumer<PeripheralAccess> onAccept;
+    private final Consumer<PeripheralAccessEntry> onAccept;
 
     private final JCheckBox includeCheck = new JCheckBox();
     private final JComboBox<AccessMode> modeCombo = new JComboBox<>(AccessMode.values());
@@ -35,7 +35,7 @@ public class AddPeripheralAccessDialog extends DialogComponentProvider {
     private static final long PERIPH_MAX = 0x5FFF_FFFFL;
 
     public AddPeripheralAccessDialog(
-            PluginTool tool, Program program, PeripheralAccess initialRow, Consumer<PeripheralAccess> onAccept) {
+            PluginTool tool, Program program, PeripheralAccessEntry initialRow, Consumer<PeripheralAccessEntry> onAccept) {
         super((initialRow == null) ? "Add Peripheral Access" : "Edit Peripheral Access",
                 false, true, true, false);
         this.tool = tool;
@@ -112,9 +112,9 @@ public class AddPeripheralAccessDialog extends DialogComponentProvider {
             }
         }
 
-        PeripheralAccess pa = new PeripheralAccess(
+        PeripheralAccessEntry pa = new PeripheralAccessEntry(
                 includeCheck.isSelected(),
-                PeripheralAccess.Type.custom,
+                PeripheralAccessEntry.Type.custom,
                 (AccessMode) modeCombo.getSelectedItem(),
                 (ConfidenceLevel) confCombo.getSelectedItem(),
                 instrAddr,
