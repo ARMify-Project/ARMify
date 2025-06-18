@@ -81,6 +81,6 @@ public class PeripheralAccess implements Comparable<PeripheralAccess> {
 
     @Override
     public int compareTo(PeripheralAccess other) {
-        return instructionAddress.compareTo(other.instructionAddress);
+        return peripheralAddress.compareTo(other.peripheralAddress);
     }
 }
