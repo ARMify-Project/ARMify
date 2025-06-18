@@ -1,6 +1,6 @@
 package armify.services;
 
-import armify.domain.PeripheralAccessEntry;
+import armify.domain.MMIOAccessEntry;
 import armify.util.AddressUtils;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.*;
@@ -14,10 +14,10 @@ import java.util.List;
 
 public class ProgramAnalysisService {
 
-    public List<PeripheralAccessEntry> scanPeripheralAccesses(Program program, TaskMonitor monitor)
+    public List<MMIOAccessEntry> scanMMIOAccesses(Program program, TaskMonitor monitor)
             throws CancelledException {
 
-        List<PeripheralAccessEntry> accesses = new ArrayList<>();
+        List<MMIOAccessEntry> accesses = new ArrayList<>();
         Listing listing = program.getListing();
         long totalInsns = listing.getNumInstructions();
         monitor.initialize(totalInsns);
@@ -32,11 +32,11 @@ public class ProgramAnalysisService {
                 }
 
                 Address target = ref.getToAddress();
-                if (!AddressUtils.isMmioAddress(target)) {
+                if (!AddressUtils.isPeripheralRange(target)) {
                     continue;
                 }
 
-                PeripheralAccessEntry access = createPeripheralAccess(ins, ref, target, program);
+                MMIOAccessEntry access = createMMIOAccess(ins, ref, target, program);
                 accesses.add(access);
             }
         }
@@ -44,35 +44,35 @@ public class ProgramAnalysisService {
         return accesses;
     }
 
-    private PeripheralAccessEntry createPeripheralAccess(Instruction ins, Reference ref, Address target, Program program) {
+    private MMIOAccessEntry createMMIOAccess(Instruction ins, Reference ref, Address target, Program program) {
         RefType refType = ref.getReferenceType();
         boolean read = refType.isRead();
         boolean write = refType.isWrite();
 
-        PeripheralAccessEntry.AccessMode mode;
-        PeripheralAccessEntry.ConfidenceLevel confidence;
+        MMIOAccessEntry.AccessMode mode;
+        MMIOAccessEntry.ConfidenceLevel confidence;
 
         if (read && write) {
-            mode = PeripheralAccessEntry.AccessMode.read_write;
-            confidence = PeripheralAccessEntry.ConfidenceLevel.high;
+            mode = MMIOAccessEntry.AccessMode.read_write;
+            confidence = MMIOAccessEntry.ConfidenceLevel.high;
         } else if (read) {
-            mode = PeripheralAccessEntry.AccessMode.read;
-            confidence = PeripheralAccessEntry.ConfidenceLevel.high;
+            mode = MMIOAccessEntry.AccessMode.read;
+            confidence = MMIOAccessEntry.ConfidenceLevel.high;
         } else if (write) {
-            mode = PeripheralAccessEntry.AccessMode.write;
-            confidence = PeripheralAccessEntry.ConfidenceLevel.high;
+            mode = MMIOAccessEntry.AccessMode.write;
+            confidence = MMIOAccessEntry.ConfidenceLevel.high;
         } else {
-            mode = PeripheralAccessEntry.AccessMode.unknown;
-            confidence = PeripheralAccessEntry.ConfidenceLevel.low;
+            mode = MMIOAccessEntry.AccessMode.unknown;
+            confidence = MMIOAccessEntry.ConfidenceLevel.low;
         }
 
-        boolean include = confidence != PeripheralAccessEntry.ConfidenceLevel.low;
+        boolean include = confidence != MMIOAccessEntry.ConfidenceLevel.low;
 
         Function fn = program.getFunctionManager().getFunctionContaining(ins.getAddress());
         String fnName = (fn != null) ? fn.getName() : "<GLOBAL>";
 
-        return new PeripheralAccessEntry(
-                include, PeripheralAccessEntry.Type.scanned, mode, confidence,
+        return new MMIOAccessEntry(
+                include, MMIOAccessEntry.Type.scanned, mode, confidence,
                 ins.getAddress(), fnName, ins.toString(), target
         );
     }

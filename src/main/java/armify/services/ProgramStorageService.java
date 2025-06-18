@@ -1,7 +1,7 @@
 package armify.services;
 
-import armify.domain.PeripheralAccessEntry;
-import armify.persistence.PeripheralAccessSaveable;
+import armify.domain.MMIOAccessEntry;
+import armify.persistence.MMIOAccessSaveable;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressIterator;
 import ghidra.program.model.listing.Program;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Persistence helper – stores full {@link PeripheralAccessEntry} via an
+ * Persistence helper – stores full {@link MMIOAccessEntry} via an
  * {@link ObjectPropertyMap}.
  */
 public class ProgramStorageService {
@@ -46,7 +46,7 @@ public class ProgramStorageService {
     /* MMIO objects                                                       */
     /* ------------------------------------------------------------------ */
 
-    public void saveMMIOAddresses(Program prog, List<PeripheralAccessEntry> list) {
+    public void saveMMIOAccesses(Program prog, List<MMIOAccessEntry> list) {
 
         int tx = prog.startTransaction("ARMify – save MMIO objects");
         boolean commit = false;
@@ -55,13 +55,13 @@ public class ProgramStorageService {
             PropertyMapManager pm = prog.getUsrPropertyManager();
             pm.removePropertyMap(PROP_MMIO_OBJ);     // nuke old data
 
-            ObjectPropertyMap<PeripheralAccessSaveable> map =
+            ObjectPropertyMap<MMIOAccessSaveable> map =
                     pm.createObjectPropertyMap(
-                            PROP_MMIO_OBJ, PeripheralAccessSaveable.class);
+                            PROP_MMIO_OBJ, MMIOAccessSaveable.class);
 
-            for (PeripheralAccessEntry pa : list) {
-                map.add(pa.getPeripheralAddress(),
-                        new PeripheralAccessSaveable(pa));
+            for (MMIOAccessEntry pa : list) {
+                map.add(pa.getRegisterAddress(),
+                        new MMIOAccessSaveable(pa));
             }
             commit = true;
         } catch (Exception ex) {
@@ -72,9 +72,9 @@ public class ProgramStorageService {
     }
 
     @SuppressWarnings("unchecked")
-    public List<PeripheralAccessEntry> loadMMIOAddresses(Program prog) {
+    public List<MMIOAccessEntry> loadMMIOAccesses(Program prog) {
 
-        List<PeripheralAccessEntry> out = new ArrayList<>();
+        List<MMIOAccessEntry> out = new ArrayList<>();
 
         ObjectPropertyMap<?> raw =
                 prog.getUsrPropertyManager().getObjectPropertyMap(PROP_MMIO_OBJ);
@@ -82,13 +82,13 @@ public class ProgramStorageService {
             return out;
         }
 
-        ObjectPropertyMap<PeripheralAccessSaveable> map =
-                (ObjectPropertyMap<PeripheralAccessSaveable>) raw;
+        ObjectPropertyMap<MMIOAccessSaveable> map =
+                (ObjectPropertyMap<MMIOAccessSaveable>) raw;
 
         AddressIterator it = map.getPropertyIterator();
         while (it.hasNext()) {
             Address addr = it.next();
-            out.add(map.get(addr).toPeripheralAccess(prog));
+            out.add(map.get(addr).toMMIOAccess(prog));
         }
         return out;
     }

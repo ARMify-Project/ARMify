@@ -1,7 +1,7 @@
 package armify.services;
 
 import armify.domain.EventBus;
-import armify.domain.PeripheralAccessEntry;
+import armify.domain.MMIOAccessEntry;
 import docking.widgets.OptionDialog;
 import ghidra.app.plugin.core.analysis.AutoAnalysisManager;
 import ghidra.app.util.MemoryBlockUtils;
@@ -59,14 +59,14 @@ public class ProgramInitializationService {
         }
 
         // Not the first run of the plugin
-        List<PeripheralAccessEntry> accesses = storage.loadMMIOAddresses(program);
+        List<MMIOAccessEntry> accesses = storage.loadMMIOAccesses(program);
         eventBus.publish(new armify.ui.events.AnalysisCompleteEvent(accesses));
 
         return true;
     }
 
     private boolean handleFirstRun(PluginTool tool, Program program, EventBus eventBus) {
-        List<PeripheralAccessEntry> accesses;
+        List<MMIOAccessEntry> accesses;
         long stack_pointer;
         long reset_vector;
 
@@ -119,13 +119,13 @@ public class ProgramInitializationService {
 
         // 6. Identify MMIO accesses
         try {
-            accesses = analysisService.scanPeripheralAccesses(program, TaskMonitor.DUMMY);
+            accesses = analysisService.scanMMIOAccesses(program, TaskMonitor.DUMMY);
         } catch (CancelledException e) {
             return false;
         }
 
         // 7. Store the accesses and the initialised flag
-        storage.saveMMIOAddresses(program, accesses);
+        storage.saveMMIOAccesses(program, accesses);
         storage.setInitialised(program, true);
 
         // 8. Raise AnalysisCompleteEvent notification

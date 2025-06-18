@@ -1,7 +1,7 @@
 package armify.ui.views;
 
 public enum ViewType {
-    MMIO_ADDRESSES("MMIO Addresses"),
+    MMIO_ACCESSES("MMIO Accesses"),
     CANDIDATE_GROUPS("Candidate Groups");
 
     private final String displayName;

@@ -1,17 +1,17 @@
 package armify.ui.events;
 
-import armify.domain.PeripheralAccessEntry;
+import armify.domain.MMIOAccessEntry;
 
 import java.util.List;
 
 public class AnalysisCompleteEvent {
-    private final List<PeripheralAccessEntry> accesses;
+    private final List<MMIOAccessEntry> accesses;
 
-    public AnalysisCompleteEvent(List<PeripheralAccessEntry> accesses) {
+    public AnalysisCompleteEvent(List<MMIOAccessEntry> accesses) {
         this.accesses = accesses;
     }
 
-    public List<PeripheralAccessEntry> getAccesses() {
+    public List<MMIOAccessEntry> getAccesses() {
         return accesses;
     }
 }

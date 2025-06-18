@@ -2,7 +2,7 @@ package armify.domain;
 
 import ghidra.program.model.address.Address;
 
-public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> {
+public class MMIOAccessEntry implements Comparable<MMIOAccessEntry> {
     private boolean include;
     private final Type type;
     private final AccessMode mode;
@@ -10,7 +10,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
     private final Address instructionAddress;
     private final String functionName;
     private final String instructionString;
-    private final Address peripheralAddress;
+    private final Address registerAddress;
 
     public enum Type {
         scanned, custom
@@ -24,7 +24,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
         high, medium, low
     }
 
-    public PeripheralAccessEntry(
+    public MMIOAccessEntry(
             boolean include,
             Type type,
             AccessMode mode,
@@ -32,7 +32,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
             Address instructionAddress,
             String functionName,
             String instructionString,
-            Address peripheralAddress) {
+            Address registerAddress) {
         this.include = include;
         this.type = type;
         this.mode = mode;
@@ -40,7 +40,7 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
         this.instructionAddress = instructionAddress;
         this.functionName = functionName;
         this.instructionString = instructionString;
-        this.peripheralAddress = peripheralAddress;
+        this.registerAddress = registerAddress;
     }
 
     public boolean isInclude() {
@@ -75,12 +75,12 @@ public class PeripheralAccessEntry implements Comparable<PeripheralAccessEntry> 
         return instructionString;
     }
 
-    public Address getPeripheralAddress() {
-        return peripheralAddress;
+    public Address getRegisterAddress() {
+        return registerAddress;
     }
 
     @Override
-    public int compareTo(PeripheralAccessEntry other) {
-        return peripheralAddress.compareTo(other.peripheralAddress);
+    public int compareTo(MMIOAccessEntry other) {
+        return registerAddress.compareTo(other.registerAddress);
     }
 }

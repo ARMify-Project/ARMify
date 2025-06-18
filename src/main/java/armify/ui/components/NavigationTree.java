@@ -53,7 +53,7 @@ public class NavigationTree {
         @Override
         public List<GTreeNode> generateChildren() {
             List<GTreeNode> children = new ArrayList<>();
-            children.add(new ViewNode(ViewType.MMIO_ADDRESSES));
+            children.add(new ViewNode(ViewType.MMIO_ACCESSES));
             children.add(new ViewNode(ViewType.CANDIDATE_GROUPS));
             return children;
         }

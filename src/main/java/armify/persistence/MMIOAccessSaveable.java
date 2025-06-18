@@ -1,9 +1,9 @@
 package armify.persistence;
 
-import armify.domain.PeripheralAccessEntry;
-import armify.domain.PeripheralAccessEntry.Type;
-import armify.domain.PeripheralAccessEntry.AccessMode;
-import armify.domain.PeripheralAccessEntry.ConfidenceLevel;
+import armify.domain.MMIOAccessEntry;
+import armify.domain.MMIOAccessEntry.Type;
+import armify.domain.MMIOAccessEntry.AccessMode;
+import armify.domain.MMIOAccessEntry.ConfidenceLevel;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressSpace;
 import ghidra.program.model.listing.Program;
@@ -11,16 +11,16 @@ import ghidra.util.ObjectStorage;
 import ghidra.util.Saveable;
 
 /**
- * Serialisable wrapper around {@link PeripheralAccessEntry}.
+ * Serialisable wrapper around {@link MMIOAccessEntry}.
  */
-public class PeripheralAccessSaveable implements Saveable {
+public class MMIOAccessSaveable implements Saveable {
 
     /* ---------- persisted fields ---------- */
     private boolean include;
     private byte typeOrdinal;
     private byte modeOrdinal;
     private byte confidenceOrdinal;
-    private long periphOffset;
+    private long registerOffset;
     private long instrOffset;          // −1 = null
     private String functionName;
     private String instructionString;
@@ -29,30 +29,30 @@ public class PeripheralAccessSaveable implements Saveable {
     private static final int SCHEMA_VER = 1;
 
     /* required no-arg ctor */
-    public PeripheralAccessSaveable() {
+    public MMIOAccessSaveable() {
     }
 
-    public PeripheralAccessSaveable(PeripheralAccessEntry pa) {
-        this.include = pa.isInclude();
-        this.typeOrdinal = (byte) pa.getType().ordinal();
-        this.modeOrdinal = (byte) pa.getMode().ordinal();
-        this.confidenceOrdinal = (byte) pa.getConfidence().ordinal();
-        this.periphOffset = pa.getPeripheralAddress().getOffset();
-        Address ia = pa.getInstructionAddress();
+    public MMIOAccessSaveable(MMIOAccessEntry accessEntry) {
+        this.include = accessEntry.isInclude();
+        this.typeOrdinal = (byte) accessEntry.getType().ordinal();
+        this.modeOrdinal = (byte) accessEntry.getMode().ordinal();
+        this.confidenceOrdinal = (byte) accessEntry.getConfidence().ordinal();
+        this.registerOffset = accessEntry.getRegisterAddress().getOffset();
+        Address ia = accessEntry.getInstructionAddress();
         this.instrOffset = (ia != null) ? ia.getOffset() : NULL_SENTINEL;
-        this.functionName = pa.getFunctionName();
-        this.instructionString = pa.getInstructionString();
+        this.functionName = accessEntry.getFunctionName();
+        this.instructionString = accessEntry.getInstructionString();
     }
 
     /* ---------- re-materialise ---------- */
-    public PeripheralAccessEntry toPeripheralAccess(Program prog) {
+    public MMIOAccessEntry toMMIOAccess(Program program) {
 
-        AddressSpace space = prog.getAddressFactory().getDefaultAddressSpace();
-        Address periph = space.getAddress(periphOffset);
+        AddressSpace space = program.getAddressFactory().getDefaultAddressSpace();
+        Address register = space.getAddress(registerOffset);
         Address instr = (instrOffset == NULL_SENTINEL)
                 ? null : space.getAddress(instrOffset);
 
-        return new PeripheralAccessEntry(
+        return new MMIOAccessEntry(
                 include,
                 Type.values()[typeOrdinal],
                 AccessMode.values()[modeOrdinal],
@@ -60,7 +60,7 @@ public class PeripheralAccessSaveable implements Saveable {
                 instr,
                 functionName,
                 instructionString,
-                periph);
+                register);
     }
 
     /* ---------- Saveable impl ---------- */
@@ -70,7 +70,7 @@ public class PeripheralAccessSaveable implements Saveable {
         s.putByte(typeOrdinal);
         s.putByte(modeOrdinal);
         s.putByte(confidenceOrdinal);
-        s.putLong(periphOffset);
+        s.putLong(registerOffset);
         s.putLong(instrOffset);
         s.putString(functionName);
         s.putString(instructionString);
@@ -82,7 +82,7 @@ public class PeripheralAccessSaveable implements Saveable {
         typeOrdinal = s.getByte();
         modeOrdinal = s.getByte();
         confidenceOrdinal = s.getByte();
-        periphOffset = s.getLong();
+        registerOffset = s.getLong();
         instrOffset = s.getLong();
         functionName = s.getString();
         instructionString = s.getString();
