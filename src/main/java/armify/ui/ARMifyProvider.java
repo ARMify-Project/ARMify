@@ -2,6 +2,7 @@ package armify.ui;
 
 import armify.domain.EventBus;
 import armify.services.MatchingEngine;
+import armify.services.ProgramAnalysisService;
 import armify.services.ProgramInitializationService;
 import armify.services.ProgramStorageService;
 import armify.ui.components.NavigationTree;
@@ -38,6 +39,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     private final MatchingEngine matchingEngine;
     private final ProgramInitializationService programInitializationService;
     private final ProgramStorageService programStorageService;
+    private final ProgramAnalysisService programAnalysisService;
     private final PluginTool tool;
 
     private Program currentProgram;
@@ -47,13 +49,15 @@ public class ARMifyProvider extends ComponentProviderAdapter {
                           String owner,
                           MatchingEngine matchingEngine,
                           ProgramInitializationService programInitializationService,
-                          ProgramStorageService programStorageService) {
+                          ProgramStorageService programStorageService,
+                          ProgramAnalysisService programAnalysisService) {
 
         super(tool, "ARMify Plugin", owner);
         this.tool = tool;
         this.matchingEngine = matchingEngine;
         this.programInitializationService = programInitializationService;
         this.programStorageService = programStorageService;
+        this.programAnalysisService = programAnalysisService;
 
         buildUI();
         views.values().forEach(v -> v.installListeners(tool, this));
@@ -76,12 +80,15 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     private void removeActionsFor(ViewType vt) {
         views.get(vt).getViewActions().forEach(this::removeLocalAction);
     }
-    
+
     private void buildUI() {
 
         NavigationTree nav = new NavigationTree(eventBus);
 
-        views.put(ViewType.MMIO_ADDRESSES, new MMIOAddressView(programStorageService, eventBus, tool));
+        views.put(
+                ViewType.MMIO_ADDRESSES,
+                new MMIOAddressView(programStorageService, programAnalysisService, eventBus, tool)
+        );
         views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(matchingEngine, eventBus));
 
         for (Map.Entry<ViewType, ViewComponent> e : views.entrySet()) {

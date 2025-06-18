@@ -2,6 +2,7 @@ package armify.ui.views;
 
 import armify.domain.EventBus;
 import armify.domain.PeripheralAccess;
+import armify.services.ProgramAnalysisService;
 import armify.services.ProgramStorageService;
 import armify.ui.components.AddPeripheralAccessDialog;
 import armify.ui.components.PeripheralAccessTable;
@@ -14,6 +15,9 @@ import ghidra.app.services.ProgramManager;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.listing.Program;
+import ghidra.util.Msg;
+import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
 import resources.Icons;
 import resources.ResourceManager;
 
@@ -24,6 +28,7 @@ import java.util.List;
 
 public class MMIOAddressView implements ViewComponent {
     private final ProgramStorageService storageService;
+    private final ProgramAnalysisService analysisService;
     private final EventBus eventBus;
     private final PluginTool tool;
     private final List<DockingAction> actions = new ArrayList<>();
@@ -31,8 +36,10 @@ public class MMIOAddressView implements ViewComponent {
     private final PeripheralAccessTable accessTable;
     private static final Icon EDIT_ICON = ResourceManager.loadImage("images/edit.gif");
 
-    public MMIOAddressView(ProgramStorageService programStorageService, EventBus eventBus, PluginTool tool) {
+    public MMIOAddressView(ProgramStorageService programStorageService, ProgramAnalysisService analysisService,
+                           EventBus eventBus, PluginTool tool) {
         this.storageService = programStorageService;
+        this.analysisService = analysisService;
         this.eventBus = eventBus;
         this.tool = tool;
 
@@ -56,7 +63,52 @@ public class MMIOAddressView implements ViewComponent {
         DockingAction refresh = new DockingAction("Refresh all", "ARMify Plugin") {
             @Override
             public void actionPerformed(ActionContext c) {
-                System.out.println("do refresh");
+                Program program = currentProgram();
+                if (program == null) {
+                    Msg.showWarn(this, null, "No active program",
+                            "Open a program before refreshing.");
+                    return;
+                }
+
+                String message =
+                        """
+                                This will…
+                                • delete all currently *scanned* peripheral-access rows
+                                • keep your *custom* rows
+                                • run a full rescan of the program, which can take some time
+                                
+                                Continue?""";
+
+                int choice = OptionDialog.showYesNoDialog(
+                        tool.getActiveWindow(),
+                        "ARMify – Rescan Peripheral Accesses", message);
+
+                if (choice != OptionDialog.YES_OPTION) {
+                    return;
+                }
+
+                // get custom entries
+                List<PeripheralAccess> customAccesses = accessTable.getAllEntries().stream()
+                        .filter(pa -> pa.getType() == PeripheralAccess.Type.custom)
+                        .toList();
+
+                // run analysis service
+                List<PeripheralAccess> scannedAccesses;
+                try {
+                    scannedAccesses = analysisService.scanPeripheralAccesses(program, TaskMonitor.DUMMY);
+                } catch (CancelledException e) {
+                    Msg.showInfo(this, null, "ARMify",
+                            "Scan cancelled, table left unchanged.");
+                    return;
+                }
+
+                // merge lists
+                List<PeripheralAccess> mergedAccesses = new ArrayList<>(customAccesses);
+                mergedAccesses.addAll(scannedAccesses);
+
+                // update gui and store
+                accessTable.setData(mergedAccesses);
+                storageService.saveMMIOAddresses(program, mergedAccesses);
             }
         };
         refresh.setToolBarData(new ToolBarData(Icons.REFRESH_ICON, "0ARMify"));
