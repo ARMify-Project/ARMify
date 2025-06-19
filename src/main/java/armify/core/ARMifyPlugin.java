@@ -26,8 +26,7 @@ public class ARMifyPlugin extends ProgramPlugin {
 
     public ARMifyPlugin(PluginTool tool) {
         super(tool);
-
-        /* shared, stateless helpers ------------------------------------ */
+        
         ProgramStorageService programStorageService = new ProgramStorageService();
 
         Path databasePath = DatabaseLocator.resolveOrExtract();
@@ -52,7 +51,6 @@ public class ARMifyPlugin extends ProgramPlugin {
         provider.registerInitialActions();
     }
 
-    /* programme lifecycle ---------------------------------------------- */
     @Override
     protected void programActivated(Program program) {
         if (!ProgramValidator.isValid(program)) {
@@ -60,6 +58,10 @@ public class ARMifyPlugin extends ProgramPlugin {
             return;
         }
         provider.setProgramReference(program);   // no init yet, happens on first show
+
+        if (provider.isVisible()) {
+            provider.componentShown();
+        }
     }
 
     @Override
