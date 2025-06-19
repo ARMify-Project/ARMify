@@ -89,7 +89,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
                 ViewType.MMIO_ACCESSES,
                 new MMIOAccessesView(programStorageService, programAnalysisService, eventBus, tool)
         );
-        views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(matchingEngine, eventBus));
+        views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(matchingEngine, eventBus, tool));
 
         for (Map.Entry<ViewType, ViewComponent> e : views.entrySet()) {
             viewContainer.add(e.getValue().getComponent(), e.getKey().name());

@@ -2,6 +2,7 @@ package armify.ui.views;
 
 import armify.domain.EventBus;
 import armify.services.MatchingEngine;
+import armify.ui.components.RegisterTable;
 import armify.ui.events.*;
 import docking.action.DockingAction;
 import docking.action.ToolBarData;
@@ -10,6 +11,7 @@ import ghidra.framework.plugintool.PluginTool;
 import resources.Icons;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -17,12 +19,17 @@ import java.util.ArrayList;
 public class CandidateGroupsView implements ViewComponent {
     private final MatchingEngine matchingEngine;
     private final EventBus eventBus;
+    private final PluginTool tool;
     private final List<DockingAction> actions = new ArrayList<>();
     private final JPanel mainPanel;
+    private final RegisterTable registerTable;
 
-    public CandidateGroupsView(MatchingEngine matchingEngine, EventBus eventBus) {
+    public CandidateGroupsView(MatchingEngine matchingEngine, EventBus eventBus, PluginTool tool) {
         this.matchingEngine = matchingEngine;
         this.eventBus = eventBus;
+        this.tool = tool;
+
+        registerTable = new RegisterTable(tool);
 
         mainPanel = new JPanel(new BorderLayout());
         initializeUI();
@@ -54,8 +61,10 @@ public class CandidateGroupsView implements ViewComponent {
 
         // Top side - address table
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBorder(BorderFactory.createTitledBorder("Included Register Addresses"));
-        topPanel.add(new JLabel("Address table (TODO)", SwingConstants.CENTER), BorderLayout.CENTER);
+        Border titledBorder = BorderFactory.createTitledBorder("Included Register Addresses");
+        Border paddingBorder = BorderFactory.createEmptyBorder(5, 0, 0, 0);
+        topPanel.setBorder(BorderFactory.createCompoundBorder(titledBorder, paddingBorder));
+        topPanel.add(registerTable, BorderLayout.CENTER);
 
         // Bottom side - controls and group tree
         JPanel bottomPanel = new JPanel(new BorderLayout());
