@@ -47,6 +47,13 @@ public class ProgramStorageService {
     /* ------------------------------------------------------------------ */
 
     public void saveMMIOAccesses(Program prog, List<MMIOAccessEntry> list) {
+        if (prog == null) {
+            return;
+        }
+        PropertyMapManager pmMgr = prog.getUsrPropertyManager();
+        if (pmMgr == null) { // scratch program
+            return;
+        }
 
         int tx = prog.startTransaction("ARMify – save MMIO objects");
         boolean commit = false;
@@ -71,25 +78,28 @@ public class ProgramStorageService {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public List<MMIOAccessEntry> loadMMIOAccesses(Program prog) {
+    public List<MMIOAccessEntry> loadMMIOAccesses(Program program) {
+        if (program == null) {
+            return List.of();
+        }
+        PropertyMapManager pmMgr = program.getUsrPropertyManager();
+        if (pmMgr == null) { // scratch program
+            return List.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        ObjectPropertyMap<MMIOAccessSaveable> map =
+                (ObjectPropertyMap<MMIOAccessSaveable>) pmMgr.getObjectPropertyMap(PROP_MMIO_OBJ);
+
+        if (map == null) {
+            return List.of();
+        }
 
         List<MMIOAccessEntry> out = new ArrayList<>();
-
-        ObjectPropertyMap<?> raw =
-                prog.getUsrPropertyManager().getObjectPropertyMap(PROP_MMIO_OBJ);
-        if (raw == null) {
-            return out;
+        for (Address addr : map.getPropertyIterator()) {
+            out.add(map.get(addr).toMMIOAccess(program));
         }
-
-        ObjectPropertyMap<MMIOAccessSaveable> map =
-                (ObjectPropertyMap<MMIOAccessSaveable>) raw;
-
-        AddressIterator it = map.getPropertyIterator();
-        while (it.hasNext()) {
-            Address addr = it.next();
-            out.add(map.get(addr).toMMIOAccess(prog));
-        }
+        out.sort(null);
         return out;
     }
 }
