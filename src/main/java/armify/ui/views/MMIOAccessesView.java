@@ -7,6 +7,7 @@ import armify.services.ProgramStorageService;
 import armify.ui.components.AddMMIOAccessDialog;
 import armify.ui.components.MMIOAccessTable;
 import armify.ui.events.AnalysisCompleteEvent;
+import armify.ui.events.ProgramChangedEvent;
 import docking.ActionContext;
 import docking.action.DockingAction;
 import docking.action.ToolBarData;
@@ -222,8 +223,19 @@ public class MMIOAccessesView implements ViewComponent {
 
     private void registerEventHandlers() {
         eventBus.subscribe(AnalysisCompleteEvent.class,
-                evt -> SwingUtilities.invokeLater(() ->
-                        accessTable.setData(evt.getAccesses())));
+                evt -> SwingUtilities.invokeLater(
+                        () -> accessTable.setData(evt.getAccesses())
+                )
+        );
+
+        eventBus.subscribe(ProgramChangedEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> {
+                    Program prog = evt.program();
+                    List<MMIOAccessEntry> rows = storageService.loadMMIOAccesses(prog);
+
+                    accessTable.setData(rows);
+                })
+        );
     }
 
     private Program currentProgram() {

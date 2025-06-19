@@ -26,7 +26,7 @@ public class ARMifyPlugin extends ProgramPlugin {
 
     public ARMifyPlugin(PluginTool tool) {
         super(tool);
-        
+
         ProgramStorageService programStorageService = new ProgramStorageService();
 
         Path databasePath = DatabaseLocator.resolveOrExtract();
@@ -62,6 +62,11 @@ public class ARMifyPlugin extends ProgramPlugin {
         if (provider.isVisible()) {
             provider.componentShown();
         }
+    }
+
+    @Override
+    protected void programDeactivated(Program program) {
+        provider.setProgramReference(null);
     }
 
     @Override
