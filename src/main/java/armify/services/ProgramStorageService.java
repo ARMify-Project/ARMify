@@ -1,21 +1,18 @@
 package armify.services;
 
 import armify.domain.MMIOAccessEntry;
-import armify.persistence.MMIOAccessSaveable;
+import armify.storage.MMIOAccessListSaveable;
 import ghidra.program.model.address.Address;
-import ghidra.program.model.address.AddressIterator;
 import ghidra.program.model.listing.Program;
 import ghidra.program.model.util.ObjectPropertyMap;
 import ghidra.program.model.util.PropertyMapManager;
 import ghidra.util.Msg;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * Persistence helper – stores full {@link MMIOAccessEntry} via an
- * {@link ObjectPropertyMap}.
- */
 public class ProgramStorageService {
 
     private static final String OPT_CATEGORY = "ARMify";
@@ -62,13 +59,21 @@ public class ProgramStorageService {
             PropertyMapManager pm = prog.getUsrPropertyManager();
             pm.removePropertyMap(PROP_MMIO_OBJ);     // nuke old data
 
-            ObjectPropertyMap<MMIOAccessSaveable> map =
+            ObjectPropertyMap<MMIOAccessListSaveable> map =
                     pm.createObjectPropertyMap(
-                            PROP_MMIO_OBJ, MMIOAccessSaveable.class);
+                            PROP_MMIO_OBJ, MMIOAccessListSaveable.class);
 
-            for (MMIOAccessEntry pa : list) {
-                map.add(pa.getRegisterAddress(),
-                        new MMIOAccessSaveable(pa));
+            // group by register address
+            Map<Address, List<MMIOAccessEntry>> bucket = new HashMap<>();
+            for (MMIOAccessEntry e : list) {
+                bucket.computeIfAbsent(e.getRegisterAddress(),
+                        k -> new ArrayList<>()).add(e);
+            }
+
+
+            // persist
+            for (var g : bucket.entrySet()) {
+                map.add(g.getKey(), new MMIOAccessListSaveable(g.getValue()));
             }
             commit = true;
         } catch (Exception ex) {
@@ -88,16 +93,16 @@ public class ProgramStorageService {
         }
 
         @SuppressWarnings("unchecked")
-        ObjectPropertyMap<MMIOAccessSaveable> map =
-                (ObjectPropertyMap<MMIOAccessSaveable>) pmMgr.getObjectPropertyMap(PROP_MMIO_OBJ);
+        ObjectPropertyMap<MMIOAccessListSaveable> map =
+                (ObjectPropertyMap<MMIOAccessListSaveable>) pmMgr.getObjectPropertyMap(PROP_MMIO_OBJ);
 
         if (map == null) {
             return List.of();
         }
 
         List<MMIOAccessEntry> out = new ArrayList<>();
-        for (Address addr : map.getPropertyIterator()) {
-            out.add(map.get(addr).toMMIOAccess(program));
+        for (Address regAddr : map.getPropertyIterator()) {
+            out.addAll(map.get(regAddr).toRows(program));
         }
         out.sort(null);
         return out;

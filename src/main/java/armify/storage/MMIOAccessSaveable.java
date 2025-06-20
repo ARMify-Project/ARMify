@@ -1,4 +1,4 @@
-package armify.persistence;
+package armify.storage;
 
 import armify.domain.MMIOAccessEntry;
 import armify.domain.MMIOAccessEntry.Type;
@@ -14,8 +14,6 @@ import ghidra.util.Saveable;
  * Serialisable wrapper around {@link MMIOAccessEntry}.
  */
 public class MMIOAccessSaveable implements Saveable {
-
-    /* ---------- persisted fields ---------- */
     private boolean include;
     private byte typeOrdinal;
     private byte modeOrdinal;
@@ -27,8 +25,7 @@ public class MMIOAccessSaveable implements Saveable {
 
     private static final long NULL_SENTINEL = -1L;
     private static final int SCHEMA_VER = 1;
-
-    /* required no-arg ctor */
+    
     public MMIOAccessSaveable() {
     }
 
@@ -44,13 +41,11 @@ public class MMIOAccessSaveable implements Saveable {
         this.instructionString = accessEntry.getInstructionString();
     }
 
-    /* ---------- re-materialise ---------- */
     public MMIOAccessEntry toMMIOAccess(Program program) {
 
         AddressSpace space = program.getAddressFactory().getDefaultAddressSpace();
         Address register = space.getAddress(registerOffset);
-        Address instr = (instrOffset == NULL_SENTINEL)
-                ? null : space.getAddress(instrOffset);
+        Address instr = (instrOffset == NULL_SENTINEL) ? null : space.getAddress(instrOffset);
 
         return new MMIOAccessEntry(
                 include,
@@ -63,7 +58,6 @@ public class MMIOAccessSaveable implements Saveable {
                 register);
     }
 
-    /* ---------- Saveable impl ---------- */
     @Override
     public void save(ObjectStorage s) {
         s.putBoolean(include);
