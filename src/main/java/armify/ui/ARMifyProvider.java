@@ -10,7 +10,9 @@ import armify.ui.events.LocationChangedEvent;
 import armify.ui.events.ProgramChangedEvent;
 import armify.ui.events.ViewSelectionEvent;
 import armify.ui.views.*;
+import armify.util.ProgramValidator;
 import docking.WindowPosition;
+import docking.widgets.OkDialog;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.listing.Program;
@@ -141,6 +143,15 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
     @Override
     public void componentShown() {
+        if (!ProgramValidator.isValid(currentProgram)) {
+            OkDialog.showError(
+                    "Unsupported Program",
+                    "ARMifyPlugin supports only little-endian ARM binaries."
+            );
+            setVisible(false);
+            return;
+        }
+
         // We intercept BEFORE showing any UI
         if (currentProgram == null) {
             return;

@@ -2,7 +2,6 @@ package armify.core;
 
 import armify.services.*;
 import armify.ui.ARMifyProvider;
-import armify.util.ProgramValidator;
 import ghidra.app.ExamplesPluginPackage;
 import ghidra.app.plugin.PluginCategoryNames;
 import ghidra.app.plugin.ProgramPlugin;
@@ -53,10 +52,6 @@ public class ARMifyPlugin extends ProgramPlugin {
 
     @Override
     protected void programActivated(Program program) {
-        if (!ProgramValidator.isValid(program)) {
-            provider.setProgramReference(null);
-            return;
-        }
         provider.setProgramReference(program);   // no init yet, happens on first show
 
         if (provider.isVisible()) {
