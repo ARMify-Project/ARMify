@@ -27,7 +27,7 @@ public class MMIOAccessTable extends JPanel {
         tableModel = new AccessTableModel(tool);
         table = new GTable(tableModel);
 
-        // Basic setup ----------------------------------------------------
+        // Basic setup
         table.setRowSelectionAllowed(true);
         table.setColumnSelectionAllowed(false);
         table.setAutoResizeMode(GTable.AUTO_RESIZE_ALL_COLUMNS);
