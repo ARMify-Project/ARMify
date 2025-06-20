@@ -51,8 +51,6 @@ public class MMIOAccessTable extends JPanel {
 
     public void addMMIOAccess(MMIOAccessEntry pa) {
         tableModel.addRow(pa);
-        int viewRow = table.convertRowIndexToView(table.getRowCount() - 1);
-        table.getSelectionModel().setSelectionInterval(viewRow, viewRow);
     }
 
     public void updateMMIOAccess(int modelRow, MMIOAccessEntry pa) {
