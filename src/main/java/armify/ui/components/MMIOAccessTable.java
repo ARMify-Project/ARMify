@@ -147,7 +147,7 @@ public class MMIOAccessTable extends JPanel {
             TableColumnDescriptor<MMIOAccessEntry> d =
                     new TableColumnDescriptor<>();
 
-            d.addVisibleColumn(new IncludeColumn());
+            d.addVisibleColumn(new RegisterAddrColumn());
             d.addVisibleColumn(new GainColumn());
             d.addVisibleColumn(new TypeColumn());
             d.addVisibleColumn(new ModeColumn());
@@ -155,7 +155,8 @@ public class MMIOAccessTable extends JPanel {
             d.addVisibleColumn(new InstrAddrColumn());
             d.addVisibleColumn(new FunctionColumn());
             d.addVisibleColumn(new InstructionColumn());
-            d.addVisibleColumn(new RegisterAddrColumn());
+            d.addVisibleColumn(new IncludeColumn());
+
             return d;
         }
 
