@@ -157,12 +157,20 @@ public class AddMMIOAccessDialog extends DialogComponentProvider {
 
         int row = 0;
 
-        /* ---------- Include ---------- */
+        /* ---------- Register Address + pick ---------- */
         g.gridx = 0;
         g.gridy = row;
-        p.add(new JLabel("Include:"), g);
+        p.add(new JLabel("Register Address:"), g);
         g.gridx = 1;
-        p.add(includeCheck, g);
+        g.gridwidth = 2;
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.weightx = 1.0;
+        p.add(registerAddrInput, g);
+        g.gridx = 3;
+        g.gridwidth = 1;
+        g.weightx = 0;
+        g.fill = GridBagConstraints.NONE;
+        p.add(registerPickBtn, g);
 
         /* ---------- Mode ---------- */
         row++;
@@ -204,21 +212,13 @@ public class AddMMIOAccessDialog extends DialogComponentProvider {
         g.fill = GridBagConstraints.NONE;
         p.add(instrPickBtn, g);
 
-        /* ---------- Register Address + pick ---------- */
+        /* ---------- Include ---------- */
         row++;
         g.gridx = 0;
         g.gridy = row;
-        p.add(new JLabel("Register Address:"), g);
+        p.add(new JLabel("Include:"), g);
         g.gridx = 1;
-        g.gridwidth = 2;
-        g.fill = GridBagConstraints.HORIZONTAL;
-        g.weightx = 1.0;
-        p.add(registerAddrInput, g);
-        g.gridx = 3;
-        g.gridwidth = 1;
-        g.weightx = 0;
-        g.fill = GridBagConstraints.NONE;
-        p.add(registerPickBtn, g);
+        p.add(includeCheck, g);
 
         return p;
     }
