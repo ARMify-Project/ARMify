@@ -23,6 +23,9 @@ import resources.Icons;
 import resources.ResourceManager;
 
 import javax.swing.*;
+import javax.swing.event.CellEditorListener;
+import javax.swing.event.ChangeEvent;
+import javax.swing.table.TableCellEditor;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +54,7 @@ public class MMIOAccessesView implements ViewComponent {
 
         registerEventHandlers();
         buildActions();
+        attachCheckboxListener();
     }
 
     private void buildActions() {
@@ -58,6 +62,24 @@ public class MMIOAccessesView implements ViewComponent {
         actions.add(addDockingAction());
         actions.add(editDockingAction());
         actions.add(deleteDockingAction());
+    }
+
+    private void attachCheckboxListener() {
+        TableCellEditor editor = accessTable.getTable().getDefaultEditor(Boolean.class);
+
+        editor.addCellEditorListener(new CellEditorListener() {
+            @Override
+            public void editingStopped(ChangeEvent e) {
+                Program program = currentProgram();
+                if (program != null) {
+                    persist(program);
+                }
+            }
+
+            @Override
+            public void editingCanceled(ChangeEvent e) {
+            }
+        });
     }
 
     private DockingAction refreshDockingAction() {
