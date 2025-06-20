@@ -11,7 +11,6 @@ import armify.ui.events.ProgramChangedEvent;
 import armify.ui.events.ViewSelectionEvent;
 import armify.ui.views.*;
 import docking.WindowPosition;
-import docking.widgets.OkDialog;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.listing.Program;
@@ -131,10 +130,6 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         this.currentProgram = program;
         this.initDone = false;
 
-        if (program == null && isVisible()) {
-            setVisible(false);
-        }
-
         eventBus.publish(new ProgramChangedEvent(program));
     }
 
@@ -148,8 +143,6 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     public void componentShown() {
         // We intercept BEFORE showing any UI
         if (currentProgram == null) {
-            OkDialog.showInfo("ARMify Plugin", "No program is loaded");
-            setVisible(false);
             return;
         }
         if (initDone) {
