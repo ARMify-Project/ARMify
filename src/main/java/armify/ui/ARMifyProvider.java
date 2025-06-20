@@ -143,6 +143,11 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
     @Override
     public void componentShown() {
+        // We intercept BEFORE showing any UI
+        if (currentProgram == null) {
+            return;
+        }
+        
         if (!ProgramValidator.isValid(currentProgram)) {
             OkDialog.showError(
                     "Unsupported Program",
@@ -152,10 +157,6 @@ public class ARMifyProvider extends ComponentProviderAdapter {
             return;
         }
 
-        // We intercept BEFORE showing any UI
-        if (currentProgram == null) {
-            return;
-        }
         if (initDone) {
             super.componentShown();
             return;
