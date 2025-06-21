@@ -259,6 +259,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
         if (initDone) {
             super.componentShown();
+            eventBus.publish(new ListingFullSyncEvent());
             return;
         }
 

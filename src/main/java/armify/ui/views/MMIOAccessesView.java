@@ -258,8 +258,12 @@ public class MMIOAccessesView implements ViewComponent {
                     List<MMIOAccessEntry> rows = storageService.loadMMIOAccesses(prog);
 
                     accessTable.setData(rows);
+                    reconcileWithListing();
                 })
         );
+
+        eventBus.subscribe(ListingFullSyncEvent.class,
+                ev -> SwingUtilities.invokeLater(this::reconcileWithListing));
 
         eventBus.subscribe(ListingFunctionRenamedEvent.class,
                 evt -> SwingUtilities.invokeLater(() -> handleFunctionRenamed(evt)));
@@ -275,6 +279,65 @@ public class MMIOAccessesView implements ViewComponent {
 
         eventBus.subscribe(ListingCodePatchedEvent.class,
                 evt -> SwingUtilities.invokeLater(() -> handleCodePatched(evt)));
+    }
+
+    private void reconcileWithListing() {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        Listing listing = program.getListing();
+        FunctionManager fm = program.getFunctionManager();
+
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        List<Integer> rowsToDelete = new ArrayList<>();
+        boolean changed = false;
+
+        for (int modelIdx = 0; modelIdx < rows.size(); modelIdx++) {
+
+            MMIOAccessEntry accessEntry = rows.get(modelIdx);
+            Address ia = accessEntry.getInstructionAddress();
+            if (ia == null) {
+                continue;                       // custom row without address
+            }
+
+            Instruction instr = listing.getInstructionAt(ia);
+            if (instr == null) {
+                rowsToDelete.add(modelIdx);     // instruction vanished
+                continue;
+            }
+
+            String text = instr.toString();
+            Function fn = fm.getFunctionContaining(ia);
+            String fnName = (fn != null ? fn.getName() : "<no func>");
+
+            if (!text.equals(accessEntry.getInstructionString()) ||
+                    !fnName.equals(accessEntry.getFunctionName())) {
+
+                MMIOAccessEntry upd = new MMIOAccessEntry(
+                        accessEntry.isInclude(), accessEntry.getType(), accessEntry.getMode(),
+                        accessEntry.getConfidence(), ia, fnName, text, accessEntry.getRegisterAddress());
+
+                accessTable.updateMMIOAccess(modelIdx, upd);
+                changed = true;
+            }
+        }
+
+        // delete stale rows (convert to view indices)
+        if (!rowsToDelete.isEmpty()) {
+            GTable table = accessTable.getTable();
+            int[] viewIdx = rowsToDelete.stream()
+                    .mapToInt(table::convertRowIndexToView)
+                    .filter(i -> i >= 0)
+                    .toArray();
+            accessTable.deleteRows(viewIdx);
+            changed = true;
+        }
+
+        if (changed) {
+            persist(program);
+        }
     }
 
     private void handleFunctionRenamed(ListingFunctionRenamedEvent evt) {
@@ -412,7 +475,7 @@ public class MMIOAccessesView implements ViewComponent {
         for (int modelIdx = 0; modelIdx < rows.size(); modelIdx++) {
             MMIOAccessEntry e = rows.get(modelIdx);
             Address ia = e.getInstructionAddress();
-            
+
             if (ia == null || !patched.contains(ia)) {
                 continue;                               // row unaffected
             }
