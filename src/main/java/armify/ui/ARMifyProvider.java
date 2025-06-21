@@ -6,16 +6,23 @@ import armify.services.ProgramAnalysisService;
 import armify.services.ProgramInitializationService;
 import armify.services.ProgramStorageService;
 import armify.ui.components.NavigationTree;
-import armify.ui.events.LocationChangedEvent;
-import armify.ui.events.ProgramChangedEvent;
-import armify.ui.events.ViewSelectionEvent;
+import armify.ui.events.*;
 import armify.ui.views.*;
 import armify.util.ProgramValidator;
 import docking.WindowPosition;
 import docking.widgets.OkDialog;
+import ghidra.framework.model.DomainObjectChangeRecord;
+import ghidra.framework.model.DomainObjectChangedEvent;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
+import ghidra.program.model.address.Address;
+import ghidra.program.model.address.AddressSet;
+import ghidra.program.model.address.AddressSetView;
+import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.symbol.Symbol;
+import ghidra.program.model.symbol.SymbolType;
+import ghidra.program.util.ProgramChangeRecord;
 import ghidra.program.util.ProgramLocation;
 import resources.ResourceManager;
 
@@ -23,6 +30,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.EnumMap;
 import java.util.Map;
+
+import static ghidra.program.util.ProgramEvent.*;
 
 /**
  * Provider becomes visible only via Window → ARMify.  The first time it is
@@ -69,6 +78,10 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         setIcon(ResourceManager.loadImage("images/logo.png"));
         setDefaultWindowPosition(WindowPosition.WINDOW);
         setTitle("ARMify Plugin");
+    }
+
+    public boolean isInitDone() {
+        return initDone;
     }
 
     public void registerInitialActions() {
@@ -141,13 +154,100 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         }
     }
 
+    public void publishListingChangedEvent(DomainObjectChangedEvent domainObjectChangedEvent) {
+        if (domainObjectChangedEvent == null) {
+            return;
+        }
+
+        boolean sawCodeRemoved = false;
+        boolean sawCodeAdded = false;
+        AddressSet removedSet = new AddressSet();
+        AddressSet addedSet = new AddressSet();
+
+        for (DomainObjectChangeRecord domainObjectChangeRecord : domainObjectChangedEvent) {
+            if (!(domainObjectChangeRecord instanceof ProgramChangeRecord programChangeRecord)) {
+                continue;
+            }
+
+            switch (programChangeRecord.getEventType()) {
+                case FUNCTION_ADDED -> {
+                    Function fn = (Function) programChangeRecord.getObject();
+                    if (fn != null) {
+                        eventBus.publish(
+                                new ListingFunctionAddedEvent(
+                                        fn.getEntryPoint(),
+                                        fn.getBody().getMaxAddress(),
+                                        fn.getName()
+                                )
+                        );
+                    }
+                }
+
+                case FUNCTION_REMOVED -> {
+                    AddressSetView body = (AddressSetView) programChangeRecord.getOldValue();
+                    if (body != null && !body.isEmpty()) {
+                        eventBus.publish(new ListingFunctionRemovedEvent(body.getMinAddress(), body.getMaxAddress()));
+                    }
+                }
+
+                case SYMBOL_RENAMED -> {
+                    Symbol sym = (Symbol) programChangeRecord.getObject();
+                    if (sym != null && sym.getSymbolType() == SymbolType.FUNCTION) {
+                        Function fn = (Function) sym.getObject();
+                        if (fn == null) {
+                            return;
+                        }
+
+                        AddressSet functionAddressSet = (AddressSet) fn.getBody();
+
+                        if (functionAddressSet != null && !functionAddressSet.isEmpty()) {
+                            String oldName = (String) programChangeRecord.getOldValue();
+                            String newName = sym.getName();
+                            Address start = functionAddressSet.getMinAddress();
+                            Address end = functionAddressSet.getMaxAddress();
+
+                            eventBus.publish(new ListingFunctionRenamedEvent(start, end, oldName, newName));
+                        }
+                    }
+                }
+
+                case CODE_REMOVED -> {
+                    sawCodeRemoved = true;
+                    removedSet.addRange(programChangeRecord.getStart(), programChangeRecord.getEnd());
+                }
+
+                case CODE_ADDED -> {
+                    sawCodeAdded = true;
+                    addedSet.addRange(programChangeRecord.getStart(), programChangeRecord.getEnd());
+                }
+
+                case CODE_REPLACED -> {
+                    sawCodeRemoved = true;
+                    sawCodeAdded = true;
+                    addedSet.addRange(programChangeRecord.getStart(), programChangeRecord.getEnd());
+                }
+
+                default -> { /* ignore everything else */ }
+            }
+        }
+
+        if (sawCodeRemoved) {
+            if (sawCodeAdded) {
+                addedSet.union(removedSet);
+                eventBus.publish(new ListingCodePatchedEvent(addedSet));
+            } else {
+                eventBus.publish(new ListingCodeClearedEvent(removedSet));
+            }
+        }
+    }
+
     @Override
     public void componentShown() {
         // We intercept BEFORE showing any UI
         if (currentProgram == null) {
             return;
         }
-        
+
         if (!ProgramValidator.isValid(currentProgram)) {
             OkDialog.showError(
                     "Unsupported Program",

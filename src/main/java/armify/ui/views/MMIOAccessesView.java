@@ -6,16 +6,18 @@ import armify.services.ProgramAnalysisService;
 import armify.services.ProgramStorageService;
 import armify.ui.components.AddMMIOAccessDialog;
 import armify.ui.components.MMIOAccessTable;
-import armify.ui.events.AnalysisCompleteEvent;
-import armify.ui.events.ProgramChangedEvent;
+import armify.ui.events.*;
 import docking.ActionContext;
 import docking.action.DockingAction;
 import docking.action.ToolBarData;
 import docking.widgets.OptionDialog;
+import docking.widgets.table.GTable;
 import ghidra.app.services.ProgramManager;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
-import ghidra.program.model.listing.Program;
+import ghidra.program.model.address.Address;
+import ghidra.program.model.address.AddressSet;
+import ghidra.program.model.listing.*;
 import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
@@ -26,7 +28,7 @@ import javax.swing.*;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.table.TableCellEditor;
-import java.awt.*;
+import java.awt.BorderLayout;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -258,6 +260,198 @@ public class MMIOAccessesView implements ViewComponent {
                     accessTable.setData(rows);
                 })
         );
+
+        eventBus.subscribe(ListingFunctionRenamedEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> handleFunctionRenamed(evt)));
+
+        eventBus.subscribe(ListingFunctionAddedEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> handleFunctionAdded(evt)));
+
+        eventBus.subscribe(ListingFunctionRemovedEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> handleFunctionRemoved(evt)));
+
+        eventBus.subscribe(ListingCodeClearedEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> handleCodeCleared(evt)));
+
+        eventBus.subscribe(ListingCodePatchedEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> handleCodePatched(evt)));
+    }
+
+    private void handleFunctionRenamed(ListingFunctionRenamedEvent evt) {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        Address start = evt.start();
+        Address end = evt.end();
+        String newName = evt.newName();
+
+        boolean changed = false;
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        for (int i = 0; i < rows.size(); i++) {
+            MMIOAccessEntry accessEntry = rows.get(i);
+            Address ia = accessEntry.getInstructionAddress();
+            if (ia != null && ia.compareTo(start) >= 0 && ia.compareTo(end) <= 0) {
+                MMIOAccessEntry updated = new MMIOAccessEntry(
+                        accessEntry.isInclude(), accessEntry.getType(), accessEntry.getMode(), accessEntry.getConfidence(),
+                        ia, newName, accessEntry.getInstructionString(), accessEntry.getRegisterAddress());
+                accessTable.updateMMIOAccess(i, updated);
+                changed = true;
+            }
+        }
+        if (changed) persist(program);
+    }
+
+    private void handleFunctionAdded(ListingFunctionAddedEvent evt) {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        Address start = evt.start();
+        Address end = evt.end();
+        String newName = evt.name();
+
+        boolean changed = false;
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        for (int i = 0; i < rows.size(); i++) {
+            MMIOAccessEntry accessEntry = rows.get(i);
+            Address ia = accessEntry.getInstructionAddress();
+            if (ia != null && ia.compareTo(start) >= 0 && ia.compareTo(end) <= 0
+                    && "<no func>".equals(accessEntry.getFunctionName())) {
+
+                MMIOAccessEntry updated = new MMIOAccessEntry(
+                        accessEntry.isInclude(), accessEntry.getType(), accessEntry.getMode(), accessEntry.getConfidence(),
+                        ia, newName, accessEntry.getInstructionString(), accessEntry.getRegisterAddress());
+                accessTable.updateMMIOAccess(i, updated);
+                changed = true;
+            }
+        }
+        if (changed) persist(program);
+    }
+
+    private void handleFunctionRemoved(ListingFunctionRemovedEvent evt) {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        Address start = evt.start();
+        Address end = evt.end();
+
+        boolean changed = false;
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        for (int i = 0; i < rows.size(); i++) {
+            MMIOAccessEntry accessEntry = rows.get(i);
+            Address ia = accessEntry.getInstructionAddress();
+            if (ia != null && ia.compareTo(start) >= 0 && ia.compareTo(end) <= 0
+                    && !"<no func>".equals(accessEntry.getFunctionName())) {
+
+                MMIOAccessEntry updated = new MMIOAccessEntry(
+                        accessEntry.isInclude(), accessEntry.getType(), accessEntry.getMode(), accessEntry.getConfidence(),
+                        ia, "<no func>", accessEntry.getInstructionString(), accessEntry.getRegisterAddress());
+                accessTable.updateMMIOAccess(i, updated);
+                changed = true;
+            }
+        }
+
+        if (changed) persist(program);
+    }
+
+    private void handleCodeCleared(ListingCodeClearedEvent evt) {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        AddressSet cleared = evt.clearedRange();
+        if (cleared == null || cleared.isEmpty()) {
+            return;
+        }
+
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        List<Integer> viewRows = new ArrayList<>();
+
+        for (int modelIdx = 0; modelIdx < rows.size(); modelIdx++) {
+            MMIOAccessEntry accessEntry = rows.get(modelIdx);
+            Address ia = accessEntry.getInstructionAddress();
+            if (ia == null || !cleared.contains(ia)) {
+                continue;
+            }
+            int viewIdx = accessTable.getTable().convertRowIndexToView(modelIdx);
+            if (viewIdx >= 0) {
+                viewRows.add(viewIdx);
+            }
+        }
+
+        if (!viewRows.isEmpty()) {
+            accessTable.deleteRows(viewRows.stream().mapToInt(Integer::intValue).toArray());
+            persist(program);
+        }
+    }
+
+    private void handleCodePatched(ListingCodePatchedEvent evt) {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        AddressSet patched = evt.patchedRange();
+        if (patched == null || patched.isEmpty()) {
+            return;
+        }
+
+        Listing listing = program.getListing();
+        FunctionManager fm = program.getFunctionManager();
+
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        List<Integer> rowsToDelete = new ArrayList<>();
+        boolean changed = false;
+
+        for (int modelIdx = 0; modelIdx < rows.size(); modelIdx++) {
+            MMIOAccessEntry e = rows.get(modelIdx);
+            Address ia = e.getInstructionAddress();
+            
+            if (ia == null || !patched.contains(ia)) {
+                continue;                               // row unaffected
+            }
+
+            Instruction instr = listing.getInstructionAt(ia);
+            if (instr == null) {
+                rowsToDelete.add(modelIdx);             // remember for later delete
+                continue;
+            }
+
+            /* instruction still present → rebuild row if text or func changed */
+            Function fn = fm.getFunctionContaining(ia);
+            String name = (fn != null ? fn.getName() : "<no func>");
+            String text = instr.toString();
+
+            if (!name.equals(e.getFunctionName()) ||
+                    !text.equals(e.getInstructionString())) {
+
+                MMIOAccessEntry upd = new MMIOAccessEntry(
+                        e.isInclude(), e.getType(), e.getMode(), e.getConfidence(),
+                        ia, name, text, e.getRegisterAddress());
+
+                accessTable.updateMMIOAccess(modelIdx, upd);
+                changed = true;
+            }
+        }
+
+        /* delete rows last (needs view indices) */
+        if (!rowsToDelete.isEmpty()) {
+            GTable table = accessTable.getTable();
+            int[] viewIdx = rowsToDelete.stream()
+                    .mapToInt(table::convertRowIndexToView)
+                    .filter(i -> i >= 0)
+                    .toArray();
+            accessTable.deleteRows(viewIdx);
+            changed = true;
+        }
+
+        if (changed) persist(program);
     }
 
     private Program currentProgram() {

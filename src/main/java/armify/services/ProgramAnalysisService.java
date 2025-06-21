@@ -69,7 +69,7 @@ public class ProgramAnalysisService {
         boolean include = confidence != MMIOAccessEntry.ConfidenceLevel.low;
 
         Function fn = program.getFunctionManager().getFunctionContaining(ins.getAddress());
-        String fnName = (fn != null) ? fn.getName() : "<GLOBAL>";
+        String fnName = (fn != null) ? fn.getName() : "<no func>";
 
         return new MMIOAccessEntry(
                 include, MMIOAccessEntry.Type.scanned, mode, confidence,
