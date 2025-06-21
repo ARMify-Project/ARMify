@@ -5,6 +5,7 @@ import armify.ui.ARMifyProvider;
 import ghidra.app.ExamplesPluginPackage;
 import ghidra.app.plugin.PluginCategoryNames;
 import ghidra.app.plugin.ProgramPlugin;
+import ghidra.framework.model.DomainObjectListener;
 import ghidra.framework.plugintool.*;
 import ghidra.framework.plugintool.util.PluginStatus;
 import ghidra.program.model.listing.Program;
@@ -22,6 +23,7 @@ import java.nio.file.Path;
 public class ARMifyPlugin extends ProgramPlugin {
 
     private final ARMifyProvider provider;
+    private final DomainObjectListener domainObjectListener;
 
     public ARMifyPlugin(PluginTool tool) {
         super(tool);
@@ -48,10 +50,32 @@ public class ARMifyPlugin extends ProgramPlugin {
 
         tool.addComponentProvider(provider, false);
         provider.registerInitialActions();
+
+        domainObjectListener = createDomainObjectListener();
+    }
+
+    private DomainObjectListener createDomainObjectListener() {
+        return evt -> {
+            if (!provider.isVisible() || !provider.isInitDone()) {
+                return;
+            }
+            provider.publishListingChangedEvent(evt);
+        };
+    }
+
+    @Override
+    public void dispose() {
+        if (currentProgram != null) {
+            currentProgram.removeListener(domainObjectListener);
+        }
     }
 
     @Override
     protected void programActivated(Program program) {
+        if (program != null) {
+            program.addListener(domainObjectListener);
+        }
+
         provider.setProgramReference(program);   // no init yet, happens on first show
 
         if (provider.isVisible()) {
@@ -61,6 +85,10 @@ public class ARMifyPlugin extends ProgramPlugin {
 
     @Override
     protected void programDeactivated(Program program) {
+        if (program != null) {
+            program.removeListener(domainObjectListener);
+        }
+
         provider.setProgramReference(null);
     }
 
