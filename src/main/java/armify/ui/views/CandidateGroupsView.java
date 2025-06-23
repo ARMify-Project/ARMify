@@ -1,6 +1,8 @@
 package armify.ui.views;
 
 import armify.domain.EventBus;
+import armify.domain.MMIOAccessEntry;
+import armify.domain.RegisterEntry;
 import armify.services.MatchingEngine;
 import armify.ui.components.RegisterTable;
 import armify.ui.events.*;
@@ -8,13 +10,16 @@ import docking.action.DockingAction;
 import docking.action.ToolBarData;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
+import ghidra.program.model.address.Address;
 import resources.Icons;
 
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
 
 public class CandidateGroupsView implements ViewComponent {
     private final MatchingEngine matchingEngine;
@@ -124,14 +129,25 @@ public class CandidateGroupsView implements ViewComponent {
     }
 
     private void registerEventHandlers() {
-        eventBus.subscribe(AnalysisCompleteEvent.class, this::handleAnalysisComplete);
+        eventBus.subscribe(MMIOAccessTableChangedEvent.class, this::handleMMIOAccessTableChanged);
     }
 
-    private void handleAnalysisComplete(AnalysisCompleteEvent event) {
-        // TODO: Update view with analysis results
-        SwingUtilities.invokeLater(() -> {
-            // Update UI components
-        });
+    private void handleMMIOAccessTableChanged(MMIOAccessTableChangedEvent event) {
+        List<RegisterEntry> registerEntries = new ArrayList<>();
+        Set<Address> seen = new HashSet<>();
+
+        for (MMIOAccessEntry mmioAccessEntry : event.entries()) {
+            Address addr = mmioAccessEntry.getRegisterAddress();
+
+            if (mmioAccessEntry.isInclude()) {
+                if (seen.add(addr)) {
+                    registerEntries.add(
+                            new RegisterEntry(addr, null, null, null)
+                    );
+                }
+            }
+        }
+        registerTable.setData(registerEntries);
     }
 
     @Override

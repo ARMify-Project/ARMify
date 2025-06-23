@@ -247,9 +247,10 @@ public class MMIOAccessesView implements ViewComponent {
 
     private void registerEventHandlers() {
         eventBus.subscribe(AnalysisCompleteEvent.class,
-                evt -> SwingUtilities.invokeLater(
-                        () -> accessTable.setData(evt.getAccesses())
-                )
+                evt -> SwingUtilities.invokeLater(() -> {
+                    accessTable.setData(evt.getAccesses());
+                    fireMMIOAccessTableChangedEvent();
+                })
         );
 
         eventBus.subscribe(ProgramChangedEvent.class,
@@ -524,6 +525,11 @@ public class MMIOAccessesView implements ViewComponent {
 
     private void persist(Program program) {
         storageService.saveMMIOAccesses(program, accessTable.getAllEntries());
+        fireMMIOAccessTableChangedEvent();
+    }
+
+    private void fireMMIOAccessTableChangedEvent() {
+        eventBus.publish(new MMIOAccessTableChangedEvent(accessTable.getAllEntries()));
     }
 
     @Override

@@ -126,13 +126,13 @@ public class RegisterTable extends JPanel {
 
         private static class RegisterColumn extends Column<String> {
             RegisterColumn() {
-                super("Peripheral");
+                super("Register");
             }
 
             @Override
             public String getValue(RegisterEntry r, Settings s,
                                    List<RegisterEntry> d, ServiceProvider sp) {
-                return r.registerName();
+                return r.registerName() != null ? r.registerName() : "";
             }
 
             @Override
