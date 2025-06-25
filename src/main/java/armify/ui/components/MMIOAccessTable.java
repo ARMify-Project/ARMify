@@ -146,7 +146,6 @@ public class MMIOAccessTable extends JPanel {
                     new TableColumnDescriptor<>();
 
             d.addVisibleColumn(new RegisterAddrColumn());
-            d.addVisibleColumn(new GainColumn());
             d.addVisibleColumn(new TypeColumn());
             d.addVisibleColumn(new ModeColumn());
             d.addVisibleColumn(new ConfidenceColumn());
@@ -200,23 +199,6 @@ public class MMIOAccessTable extends JPanel {
             @Override
             public String getColumnDescription() {
                 return "Include";
-            }
-        }
-
-        private static class GainColumn extends Column<String> {
-            GainColumn() {
-                super("Gain");
-            }
-
-            @Override
-            public String getValue(MMIOAccessEntry r, Settings s,
-                                   List<MMIOAccessEntry> d, ServiceProvider sp) {
-                return r.isInclude() ? "0" : "";
-            }
-
-            @Override
-            public String getColumnDescription() {
-                return "Gain";
             }
         }
 
