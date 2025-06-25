@@ -1,154 +1,155 @@
 package armify.services;
 
-import armify.domain.*;
+import armify.domain.CandidateGroup;
+import ghidra.program.model.address.Address;
 
 import java.util.*;
 
 /**
- * Glue code that turns raw MMIO touches into candidate devices and groups.
- * <p>
- * Large parts (DB queries, gain calculation) are intentionally kept in-memory
- * because <strong>&lt; 200</strong> addresses are processed at once – well
- * within normal heap limits.
+ * Core matcher – takes the user-selected MMIO addresses and produces
+ * a list of candidate device groups that are indistinguishable for the
+ * current address set (within tolerance k).
+ *
+ * <p>This is a deliberately <b>minimal</b> subset of the original
+ * Python prototype – only what the current UI needs.</p>
  */
 public class MatchingEngine {
 
-    private final DatabaseService databaseService;
-    private final DeviceGroupingService groupingService;
+    /* ── dependencies ─────────────────────────────────────────────────── */
 
-    public MatchingEngine(DatabaseService databaseService,
-                          DeviceGroupingService groupingService) {
+    private final DatabaseService db;
 
-        this.databaseService = databaseService;
-        this.groupingService = groupingService;
+    /* ── cached state (cleared on every recompute) ────────────────────── */
+
+    private final List<CandidateGroup> groups = new ArrayList<>();
+    private final Map<Long, Integer> gain = new HashMap<>();
+
+    /* ── ctor ─────────────────────────────────────────────────────────── */
+
+    public MatchingEngine(DatabaseService db) {
+        this.db = db;
     }
 
-    /**
-     * Main entry-point used by the UI.
-     *
-     * @param accesses  full list coming from the disassembly scan
-     * @param tolerance k – maximum #misses a device may have
-     */
-    public MatchResult findCandidates(List<MMIOAccessEntry> accesses, int tolerance) {
+    /* ── public API ───────────────────────────────────────────────────── */
 
-        /* 1. Collect the (unique) addresses the user included in the search. */
-        List<Long> selectedAddresses = accesses.stream()
-                .filter(MMIOAccessEntry::isInclude)
-                .map(a -> a.getRegisterAddress().getOffset())
-                .distinct()
+    /**
+     * Re-calculate candidate groups for the given address list and tolerance.
+     *
+     * @param peripheralAddresses absolute addresses (≤ 200 items expected)
+     * @param tolerance           k – how many addresses a device may miss
+     */
+    public void recompute(List<Address> peripheralAddresses, int tolerance) {
+        gain.clear();
+
+        /* 0) early out – nothing selected → empty result */
+        if (peripheralAddresses == null || peripheralAddresses.isEmpty()) {
+            groups.clear();
+            return;
+        }
+
+        /* 1) SQL hit-list: addr → (device, sig_id)* */
+        Map<Long, List<DatabaseService.AddressHit>> hitsByAddr =
+                db.queryAddressesFromAddresses(peripheralAddresses);
+
+        /* 2) Build per-device structures */
+        int totalSelected = peripheralAddresses.size();
+        Map<Integer, int[]> device2sigVector = new HashMap<>();
+        Map<Integer, Integer> deviceMatchCount = new HashMap<>();
+
+        // Iterate once over all addresses → populate the maps
+        for (int idx = 0; idx < totalSelected; idx++) {
+            long addr = peripheralAddresses.get(idx).getOffset();
+            List<DatabaseService.AddressHit> hits = hitsByAddr.getOrDefault(addr, List.of());
+
+            for (DatabaseService.AddressHit hit : hits) {
+                int dev = hit.deviceId();
+                int sig = hit.signatureId();
+
+                // lazily allocate an int[] of size N (default 0 = “missing”)
+                int[] vec = device2sigVector.computeIfAbsent(dev, d -> new int[totalSelected]);
+                vec[idx] = sig;               // store signature at position idx
+                deviceMatchCount.merge(dev, 1, Integer::sum);
+            }
+        }
+
+        /* 3) Keep only devices that fit tolerance rule */
+        List<Integer> candidates = deviceMatchCount.entrySet().stream()
+                .filter(e -> (totalSelected - e.getValue()) <= tolerance)
+                .map(Map.Entry::getKey)
                 .toList();
 
-        /* 2. DB hit list. */
-        Map<Long, List<DatabaseService.AddressHit>> hitMap =
-                databaseService.queryAddresses(selectedAddresses);
+        /* 4) Bucket identical devices by their “signature vector” */
+        Map<String, List<Integer>> bucket = new LinkedHashMap<>();
 
-        /* 3. Per-device score. */
-        Map<Integer, Integer> deviceScores = calculateDeviceScores(hitMap);
-
-        /* 4. Filter by k. */
-        List<DeviceCandidate> candidates =
-                buildCandidates(deviceScores, selectedAddresses.size(), tolerance);
-
-        /* 5. Group by composite fingerprint. */
-        List<MatchResult.DeviceGroup> groups =
-                groupingService.groupDevices(candidates, selectedAddresses);
-
-        /* 6. Absolute gains per address (for the “+” column in the table). */
-        Map<Long, Integer> absoluteGains =
-                calculateAbsoluteGains(selectedAddresses, hitMap,
-                        deviceScores, selectedAddresses.size(), tolerance);
-
-        return new MatchResult(groups, deviceScores, absoluteGains);
-    }
-
-    /* --------------------------------------------------------------------- */
-    /* helpers                                                               */
-    /* --------------------------------------------------------------------- */
-
-    private Map<Integer, Integer> calculateDeviceScores(
-            Map<Long, List<DatabaseService.AddressHit>> hitMap) {
-
-        Map<Integer, Integer> scores = new HashMap<>();
-        for (List<DatabaseService.AddressHit> hits : hitMap.values()) {
-            for (DatabaseService.AddressHit hit : hits) {
-                scores.merge(hit.getDeviceId(), 1, Integer::sum);
-            }
+        for (int dev : candidates) {
+            int[] vec = device2sigVector.get(dev);
+            // Turn the int[] into a compact key – Arrays.toString() is good enough
+            String fp = Arrays.toString(vec);
+            bucket.computeIfAbsent(fp, k -> new ArrayList<>()).add(dev);
         }
-        return scores;
-    }
 
-    private List<DeviceCandidate> buildCandidates(
-            Map<Integer, Integer> deviceScores,
-            int selectedCount,
-            int tolerance) {
+        /* 5) Build immutable CandidateGroup DTOs, largest buckets first */
+        groups.clear();
 
-        List<DeviceCandidate> out = new ArrayList<>();
+        bucket.values().stream()
+                .sorted(Comparator.<List<Integer>>comparingInt(List::size).reversed())
+                .forEach(devList -> {
+                    int dev0 = devList.getFirst();
+                    int matches = deviceMatchCount.getOrDefault(dev0, 0);
 
-        for (var e : deviceScores.entrySet()) {
-            int deviceId = e.getKey();
-            int score = e.getValue();
-            int missCount = selectedCount - score;
+                    List<String> names = devList.stream()
+                            .map(db::deviceName)
+                            .toList();
 
-            if (missCount <= tolerance) {
-                // TODO pull real name + fingerprint from DB
-                String deviceName = "Device_" + deviceId;
-                byte[] fingerprint = new byte[20];
-                out.add(new DeviceCandidate(deviceId, deviceName,
-                        score, missCount, fingerprint));
+                    groups.add(new CandidateGroup(
+                            matches,
+                            totalSelected,
+                            List.copyOf(devList),
+                            names
+                    ));
+                });
+
+        /* 6) Absolute gain per address  ─────────────────────────────────── */
+        for (int idx = 0; idx < totalSelected; idx++) {
+            long addrOff = peripheralAddresses.get(idx).getOffset();
+            int added = 0;
+
+            for (var e : deviceMatchCount.entrySet()) {
+                int dev = e.getKey();
+                int matches = e.getValue();
+                int misses = totalSelected - matches;
+
+                if (misses <= tolerance) {
+                    continue;                       // already a candidate
+                }
+                boolean hit = device2sigVector.get(dev)[idx] != 0;
+                int missesIfDrop = misses - (hit ? 0 : 1);
+
+                if (missesIfDrop <= tolerance) {
+                    added++;                        // would newly qualify
+                }
             }
+            gain.put(addrOff, added);
         }
-        return out;
     }
 
     /**
-     * Implements the “absolute gain” definition from §2 of your spec.
+     * Unmodifiable view of the latest candidate groups.
      */
-    private Map<Long, Integer> calculateAbsoluteGains(
-            List<Long> selectedAddresses,
-            Map<Long, List<DatabaseService.AddressHit>> hitMap,
-            Map<Integer, Integer> deviceScores,
-            int selectedCount,
-            int tolerance) {
+    public List<CandidateGroup> getGroups() {
+        return Collections.unmodifiableList(groups);
+    }
 
-        Map<Long, Integer> gains = new HashMap<>();
+    public int getGain(Address a) {
+        return gain.getOrDefault(a.getOffset(), 0);
+    }
 
-        /* Build reverse map: device → set of addresses it hits. */
-        Map<Integer, Set<Long>> deviceToAddr = new HashMap<>();
-        for (var entry : hitMap.entrySet()) {
-            long addr = entry.getKey();
-            for (var hit : entry.getValue()) {
-                deviceToAddr
-                        .computeIfAbsent(hit.getDeviceId(), __ -> new HashSet<>())
-                        .add(addr);
-            }
+    public Optional<DatabaseService.RegisterInfo> getRegisterInfo(int groupIndex, Address addr) {
+
+        if (groupIndex < 0 || groupIndex >= groups.size()) {
+            return Optional.empty();
         }
-
-        for (long addr : selectedAddresses) {
-            int added = 0;
-
-            for (var e : deviceScores.entrySet()) {
-                int deviceId = e.getKey();
-                int score = e.getValue();
-                int missCount = selectedCount - score;
-
-                /* Device already qualifies → no change. */
-                if (missCount <= tolerance) {
-                    continue;
-                }
-
-                boolean hitsAddress = deviceToAddr
-                        .getOrDefault(deviceId, Set.of())
-                        .contains(addr);
-
-                /* If the device was missing > k, dropping a *miss* helps. */
-                int missIfDropped = missCount - (hitsAddress ? 0 : 1);
-
-                if (missIfDropped <= tolerance) {
-                    added++;
-                }
-            }
-            gains.put(addr, added);
-        }
-        return gains;
+        int firstDevId = groups.get(groupIndex).deviceIds().getFirst();
+        return db.registerInfo(firstDevId, addr.getOffset());
     }
 }

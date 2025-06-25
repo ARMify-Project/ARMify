@@ -59,6 +59,7 @@ dependencies {
     // Any external dependencies added here will automatically be copied to the lib/ directory when
     // this extension is built.
     implementation files('lib/zstd-jni-1.5.7-3.jar')
+    implementation files('lib/sqlite-jdbc-3.50.1.0.jar')
 }
 
 // Exclude additional files from the built extension

@@ -2,7 +2,7 @@ package armify.domain;
 
 import ghidra.program.model.address.Address;
 
-public record RegisterEntry(Address peripheralAddress, String peripheralName, Address baseAddress,
+public record RegisterEntry(Address peripheralAddress, int gain, String peripheralName, Address baseAddress,
                             String registerName) implements Comparable<RegisterEntry> {
 
     @Override

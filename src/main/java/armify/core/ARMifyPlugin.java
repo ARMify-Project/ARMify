@@ -32,8 +32,7 @@ public class ARMifyPlugin extends ProgramPlugin {
 
         Path databasePath = DatabaseLocator.resolveOrExtract();
         DatabaseService databaseService = new DatabaseService(databasePath);
-        DeviceGroupingService deviceGroupingService = new DeviceGroupingService(databaseService);
-        MatchingEngine matchingEngine = new MatchingEngine(databaseService, deviceGroupingService);
+        MatchingEngine matchingEngine = new MatchingEngine(databaseService);
 
         ProgramAnalysisService programAnalysisService = new ProgramAnalysisService();
         ProgramInitializationService programInitializationService =

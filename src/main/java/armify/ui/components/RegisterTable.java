@@ -81,6 +81,7 @@ public class RegisterTable extends JPanel {
             TableColumnDescriptor<RegisterEntry> d = new TableColumnDescriptor<>();
 
             d.addVisibleColumn(new RegisterAddrColumn());
+            d.addVisibleColumn(new GainColumn());
             d.addVisibleColumn(new RegisterColumn());
             d.addVisibleColumn(new PeripheralColumn());
             d.addVisibleColumn(new BaseAddrColumn());
@@ -121,6 +122,23 @@ public class RegisterTable extends JPanel {
             @Override
             public String getColumnDescription() {
                 return "Register Address";
+            }
+        }
+
+        private static class GainColumn extends Column<Integer> {
+            GainColumn() {
+                super("Gain");
+            }
+
+            @Override
+            public Integer getValue(RegisterEntry r, Settings s,
+                                    List<RegisterEntry> d, ServiceProvider sp) {
+                return r.gain();
+            }
+
+            @Override
+            public String getColumnDescription() {
+                return "How many extra devices would qualify if this address were unchecked";
             }
         }
 
