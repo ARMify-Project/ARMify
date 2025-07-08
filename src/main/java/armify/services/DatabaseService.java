@@ -134,11 +134,14 @@ public class DatabaseService implements AutoCloseable {
             ps.setLong(2, addr);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return Optional.empty();
+                List<FieldInfo> fields = regFields(rs.getInt("sig"));
                 return Optional.of(new RegisterInfo(
                         rs.getString("periph"),
                         rs.getInt("base"),
                         rs.getString("reg"),
-                        rs.getInt("sig")));
+                        rs.getInt("sig"),
+                        fields
+                ));
             }
         } catch (SQLException ex) {
             throw new RuntimeException("register_info query failed", ex);
@@ -180,7 +183,7 @@ public class DatabaseService implements AutoCloseable {
 
     // ───────────────── record helpers ───────────────
     public record RegisterInfo(String peripheral, int baseAddr,
-                               String register, int sigId) {
+                               String register, int sigId, List<FieldInfo> fields) {
     }
 
     public record FieldInfo(String name, int lsb, int msb) {
