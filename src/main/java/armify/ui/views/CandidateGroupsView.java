@@ -5,6 +5,7 @@ import armify.domain.MMIOAccessEntry;
 import armify.domain.RegisterEntry;
 import armify.services.MatchingEngine;
 import armify.ui.components.RegisterTable;
+import armify.ui.components.ViewFieldsDialog;
 import armify.ui.events.FilterRegisterAddressEvent;
 import armify.ui.events.MMIOAccessTableChangedEvent;
 import armify.ui.events.RegisterAddressExcludeEvent;
@@ -218,7 +219,11 @@ public class CandidateGroupsView implements ViewComponent {
         DockingAction view = new DockingAction("View", "ARMify Plugin") {
             @Override
             public void actionPerformed(ActionContext actionContext) {
+                RegisterEntry sel = registerTable.getSelectedEntry();
+                if (sel == null) return;
 
+                ViewFieldsDialog dlg = new ViewFieldsDialog(sel.registerName(), sel.fieldInfos());
+                tool.showDialog(dlg);
             }
 
             @Override
@@ -241,7 +246,7 @@ public class CandidateGroupsView implements ViewComponent {
         List<RegisterEntry> regRows = new ArrayList<>();
         for (MMIOAccessEntry m : ev.entries()) {
             if (m.isInclude() && uniq.add(m.getRegisterAddress())) {
-                regRows.add(new RegisterEntry(m.getRegisterAddress(), 0, null, null, null));
+                regRows.add(new RegisterEntry(m.getRegisterAddress(), 0, null, null, null, null));
             }
         }
 
@@ -262,7 +267,7 @@ public class CandidateGroupsView implements ViewComponent {
         for (RegisterEntry r : baseRows) {
             int gain = matchingEngine.getGain(r.peripheralAddress());
             gainRows.add(new RegisterEntry(r.peripheralAddress(), gain,
-                    r.peripheralName(), r.baseAddress(), r.registerName()));
+                    r.peripheralName(), r.baseAddress(), r.registerName(), r.fieldInfos()));
         }
         registerTable.setData(gainRows);
 
@@ -308,10 +313,11 @@ public class CandidateGroupsView implements ViewComponent {
                     enriched.add(new RegisterEntry(a, gain,
                             info.peripheral(),
                             baseAddr,
-                            info.register()));
+                            info.register(),
+                            info.fields()));
                 } else {
                     // fall back to address only
-                    enriched.add(new RegisterEntry(a, gain, null, null, null));
+                    enriched.add(new RegisterEntry(a, gain, null, null, null, null));
                 }
             }
             registerTable.setData(enriched);
