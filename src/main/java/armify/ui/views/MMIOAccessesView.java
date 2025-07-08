@@ -263,8 +263,15 @@ public class MMIOAccessesView implements ViewComponent {
                 })
         );
 
+        eventBus.subscribe(FilterRegisterAddressEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> accessTable.setFilterText(evt.registerAddress().toString()))
+        );
+
+        eventBus.subscribe(RegisterAddressExcludeEvent.class,
+                evt -> SwingUtilities.invokeLater(() -> excludeRegister(evt.registerAddress())));
+
         eventBus.subscribe(ListingFullSyncEvent.class,
-                ev -> SwingUtilities.invokeLater(this::reconcileWithListing));
+                evt -> SwingUtilities.invokeLater(this::reconcileWithListing));
 
         eventBus.subscribe(ListingFunctionRenamedEvent.class,
                 evt -> SwingUtilities.invokeLater(() -> handleFunctionRenamed(evt)));
@@ -280,6 +287,40 @@ public class MMIOAccessesView implements ViewComponent {
 
         eventBus.subscribe(ListingCodePatchedEvent.class,
                 evt -> SwingUtilities.invokeLater(() -> handleCodePatched(evt)));
+    }
+
+    private void excludeRegister(Address reg) {
+        Program program = currentProgram();
+        if (program == null) {
+            return;
+        }
+
+        List<MMIOAccessEntry> rows = accessTable.getAllEntries();
+        boolean changed = false;
+
+        for (int i = 0; i < rows.size(); i++) {
+            MMIOAccessEntry row = rows.get(i);
+            if (reg.equals(row.getRegisterAddress()) && row.isInclude()) {
+
+                /* rebuild row with include = false */
+                MMIOAccessEntry upd = new MMIOAccessEntry(
+                        false,                       // ← clear checkbox
+                        row.getType(),
+                        row.getMode(),
+                        row.getConfidence(),
+                        row.getInstructionAddress(),
+                        row.getFunctionName(),
+                        row.getInstructionString(),
+                        row.getRegisterAddress());
+
+                accessTable.updateMMIOAccess(i, upd);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            persist(program);
+        }
     }
 
     private void reconcileWithListing() {

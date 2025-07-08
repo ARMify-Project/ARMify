@@ -5,13 +5,19 @@ import armify.domain.MMIOAccessEntry;
 import armify.domain.RegisterEntry;
 import armify.services.MatchingEngine;
 import armify.ui.components.RegisterTable;
+import armify.ui.events.FilterRegisterAddressEvent;
 import armify.ui.events.MMIOAccessTableChangedEvent;
+import armify.ui.events.RegisterAddressExcludeEvent;
+import armify.ui.events.ViewSelectionEvent;
+import docking.ActionContext;
 import docking.action.DockingAction;
 import docking.action.ToolBarData;
+import docking.widgets.OptionDialog;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.address.Address;
 import resources.Icons;
+import resources.ResourceManager;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -21,22 +27,9 @@ import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * “Candidate Groups” view – now supports multi-selection:
- * <ul>
- *   <li>exactly 1 row → devices listed on the right</li>
- *   <li>exactly 2 rows → <i>Compare…</i> button enabled</li>
- *   <li>all other cases → both areas disabled/cleared</li>
- * </ul>
- */
 public class CandidateGroupsView implements ViewComponent {
-
-    /* ── collaborators ──────────────────────────────────────────────── */
-
     private final MatchingEngine matchingEngine;
     private final EventBus eventBus;
-
-    /* ── widgets ─────────────────────────────────────────────────────── */
 
     private final JPanel mainPanel;
     private final RegisterTable registerTable;
@@ -51,19 +44,19 @@ public class CandidateGroupsView implements ViewComponent {
     private final JLabel devicesEmptyLabel =
             new JLabel(" Select exactly one group to view its devices ", SwingConstants.CENTER);
 
-    /* ── state ───────────────────────────────────────────────────────── */
-
     private List<Address> currentAddress = List.of();
     private List<RegisterEntry> baseRows = List.of();
     private List<RegisterEntry> gainRows = List.of();
     private int tolerance = 0;
     private final List<DockingAction> actions = new ArrayList<>();
+    private final PluginTool tool;
 
-    /* ── ctor ───────────────────────────────────────────────────────── */
+    private static final Icon SHOW_ICON = ResourceManager.loadImage("images/table_go.png");
 
     public CandidateGroupsView(MatchingEngine matchingEngine, EventBus eventBus, PluginTool tool) {
         this.matchingEngine = matchingEngine;
         this.eventBus = eventBus;
+        this.tool = tool;
 
         registerTable = new RegisterTable(tool);
         groupTableModel = new GroupTableModel();
@@ -79,16 +72,14 @@ public class CandidateGroupsView implements ViewComponent {
         buildActions();
     }
 
-    /* ── UI layout ─────────────────────────────────────────────────── */
-
     private void buildUI() {
-        // ── top (MMIO address list)
+        // top (MMIO address list)
         JPanel top = new JPanel(new BorderLayout());
         Border tBorder = BorderFactory.createTitledBorder("Included Register Addresses");
         top.setBorder(BorderFactory.createCompoundBorder(tBorder, BorderFactory.createEmptyBorder(5, 0, 0, 0)));
         top.add(registerTable, BorderLayout.CENTER);
 
-        // ── bottom (groups table | devices list)
+        // bottom (groups table | devices list)
 
         groupsScroll.setBorder(BorderFactory.createTitledBorder("Candidate Groups"));
         devicesScroll.setBorder(BorderFactory.createTitledBorder("Devices in Selected Group"));
@@ -100,7 +91,7 @@ public class CandidateGroupsView implements ViewComponent {
         bottom.add(bottomSplit, BorderLayout.CENTER);
         bottom.add(controlPanel(), BorderLayout.SOUTH);
 
-        // ── vertical split
+        // vertical split
         //noinspection SuspiciousNameCombination
         JSplitPane vertical = new JSplitPane(JSplitPane.VERTICAL_SPLIT, top, bottom);
         vertical.setResizeWeight(0.4);
@@ -114,7 +105,7 @@ public class CandidateGroupsView implements ViewComponent {
         t.setFillsViewportHeight(true);
         t.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
-        // selection listener → update detail panes / buttons
+        // selection listener: update detail panes / buttons
         t.getSelectionModel().addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
             updateSelectionDependentUI();
@@ -127,7 +118,7 @@ public class CandidateGroupsView implements ViewComponent {
         // root panel with two sides
         JPanel panel = new JPanel(new BorderLayout());
 
-        /* ---------- left side : buttons ---------- */
+        // left side
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
 
         JButton applyBtn = new JButton("Apply");
@@ -138,7 +129,7 @@ public class CandidateGroupsView implements ViewComponent {
         left.add(resetBtn);
         left.add(compareBtn);
 
-        /* ---------- right side : tolerance k ---------- */
+        // right side
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
 
         right.add(new JLabel("Tolerance (k):"));
@@ -154,29 +145,92 @@ public class CandidateGroupsView implements ViewComponent {
             runMatching();
         });
 
-        /* ---------- assemble ---------- */
         panel.add(left, BorderLayout.WEST);    // buttons flush-left
         panel.add(right, BorderLayout.EAST);    // label+spinner flush-right
         return panel;
     }
 
-    /* ── toolbar actions placeholder ────────────────────────────────── */
-
     private void buildActions() {
-        DockingAction export = new DockingAction("Export Groups", "ARMify Plugin") {
-            @Override
-            public void actionPerformed(docking.ActionContext c) { /* TODO */ }
-
-            @Override
-            public boolean isEnabledForContext(docking.ActionContext c) {
-                return !groupTableModel.rows.isEmpty();
-            }
-        };
-        export.setToolBarData(new ToolBarData(Icons.ADD_ICON, "0ARMify"));
-        actions.add(export);
+        actions.add(excludeDockingAction());
+        actions.add(showDockingAction());
+        actions.add(viewDockingAction());
     }
 
-    /* ── event bus wiring ───────────────────────────────────────────── */
+    private DockingAction excludeDockingAction() {
+        DockingAction exclude = new DockingAction("Exclude", "ARMify Plugin") {
+            @Override
+            public void actionPerformed(ActionContext actionContext) {
+                RegisterEntry sel = registerTable.getSelectedEntry();
+                if (sel == null) {
+                    return;
+                }
+
+                int choice = OptionDialog.showYesNoDialog(
+                        tool.getActiveWindow(),
+                        "Exclude selected register Address",
+                        "Should the register address " + sel.peripheralAddress().toString() + " be excluded?");
+
+                if (choice != OptionDialog.YES_OPTION) {
+                    return;
+                }
+
+                eventBus.publish(new RegisterAddressExcludeEvent(sel.peripheralAddress()));
+            }
+
+            @Override
+            public boolean isEnabledForContext(ActionContext c) {
+                return registerTable.getTable().getSelectedRowCount() == 1;
+            }
+        };
+        exclude.setToolBarData(new ToolBarData(Icons.NOT_ALLOWED_ICON, "0ARMify"));
+        exclude.setDescription("Exclude selected register address");
+        return exclude;
+    }
+
+    private DockingAction showDockingAction() {
+        DockingAction show = new DockingAction("Show", "ARMify Plugin") {
+            @Override
+            public void actionPerformed(ActionContext actionContext) {
+                RegisterEntry sel = registerTable.getSelectedEntry();
+                if (sel == null) {
+                    return;
+                }
+                Address addr = sel.peripheralAddress();
+
+                // tell the MMIOAccessesView to filter for the address
+                eventBus.publish(new FilterRegisterAddressEvent(addr));
+
+                // switch to the MMIOAccessesView
+                eventBus.publish(new ViewSelectionEvent(ViewType.MMIO_ACCESSES));
+            }
+
+            @Override
+            public boolean isEnabledForContext(ActionContext c) {
+                return registerTable.getTable().getSelectedRowCount() == 1;
+            }
+        };
+        show.setToolBarData(new ToolBarData(SHOW_ICON, "0ARMify"));
+        show.setDescription("Show selected register address in MMIO Accesses");
+        return show;
+    }
+
+    private DockingAction viewDockingAction() {
+        DockingAction view = new DockingAction("View", "ARMify Plugin") {
+            @Override
+            public void actionPerformed(ActionContext actionContext) {
+
+            }
+
+            @Override
+            public boolean isEnabledForContext(ActionContext c) {
+                RegisterEntry sel = registerTable.getSelectedEntry();
+                return sel != null && sel.baseAddress() != null && registerTable.getTable().getSelectedRowCount() == 1;
+            }
+        };
+        view.setToolBarData(new ToolBarData(Icons.MAKE_SELECTION_ICON, "0ARMify"));
+        view.setDescription("View Fields Information");
+        return view;
+    }
 
     private void wireEvents() {
         eventBus.subscribe(MMIOAccessTableChangedEvent.class, this::onMMIOTableChanged);
@@ -199,8 +253,6 @@ public class CandidateGroupsView implements ViewComponent {
 
         runMatching();
     }
-
-    /* ── matching & UI refresh ───────────────────────────────────────── */
 
     private void runMatching() {
         matchingEngine.recompute(currentAddress, tolerance);
@@ -231,10 +283,6 @@ public class CandidateGroupsView implements ViewComponent {
         updateSelectionDependentUI();                   // refresh buttons / placeholders
     }
 
-    /**
-     * React to table-selection changes:
-     * 1 → show devices; 2 → enable Compare; else → clear/disable.
-     */
     private void updateSelectionDependentUI() {
         int[] sel = groupTable.getSelectedRows();
 
@@ -274,8 +322,6 @@ public class CandidateGroupsView implements ViewComponent {
         }
     }
 
-    /* ── ViewComponent interface ─────────────────────────────────────── */
-
     @Override
     public JComponent getComponent() {
         return mainPanel;
@@ -287,14 +333,21 @@ public class CandidateGroupsView implements ViewComponent {
     }
 
     @Override
-    public void installListeners(PluginTool t, ComponentProviderAdapter p) {
+    public void installListeners(PluginTool tool, ComponentProviderAdapter provider) {
+        registerTable.getTable().getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                tool.contextChanged(provider);
+            }
+        });
+
+        groupTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateSelectionDependentUI();
+                tool.contextChanged(provider);
+            }
+        });
     }
 
-    /* ── table backing beans & model ─────────────────────────────────── */
-
-    /**
-     * Lightweight DTO for one group-table row.
-     */
     private record GroupRow(int matches, int total, List<String> devices) {
         String matchText() {
             return matches + "/" + total;

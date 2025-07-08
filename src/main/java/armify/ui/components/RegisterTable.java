@@ -41,6 +41,16 @@ public class RegisterTable extends JPanel {
         return table;
     }
 
+    public int getSelectedModelRow() {
+        int viewIdx = table.getSelectedRow();
+        return (viewIdx < 0) ? -1 : table.convertRowIndexToModel(viewIdx);
+    }
+
+    public RegisterEntry getSelectedEntry() {
+        int modelRow = getSelectedModelRow();
+        return (modelRow < 0) ? null : tableModel.getRowObject(modelRow);
+    }
+
     private static class RegisterTableModel
             extends GDynamicColumnTableModel<RegisterEntry, List<RegisterEntry>> {
 
