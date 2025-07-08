@@ -4,6 +4,7 @@ import armify.domain.EventBus;
 import armify.domain.MMIOAccessEntry;
 import armify.domain.RegisterEntry;
 import armify.services.MatchingEngine;
+import armify.ui.components.CompareGroupsDialog;
 import armify.ui.components.RegisterTable;
 import armify.ui.components.ViewFieldsDialog;
 import armify.ui.events.FilterRegisterAddressEvent;
@@ -23,6 +24,8 @@ import resources.ResourceManager;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.util.List;
 import java.util.*;
@@ -63,7 +66,7 @@ public class CandidateGroupsView implements ViewComponent {
         groupTableModel = new GroupTableModel();
         groupTable = buildGroupsTable();
         deviceList = new JList<>();
-        compareBtn = new JButton("Compare…");
+        compareBtn = new JButton("Compare");
         groupsScroll = new JScrollPane(groupTable);
         devicesScroll = new JScrollPane(deviceList);
 
@@ -105,6 +108,17 @@ public class CandidateGroupsView implements ViewComponent {
         t.setRowHeight(22);
         t.setFillsViewportHeight(true);
         t.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        // fix width of the index (“#”) column
+        TableColumn idxCol = t.getColumnModel().getColumn(0);   // first column
+        idxCol.setPreferredWidth(35);
+        idxCol.setMaxWidth(45);
+
+        // right align matches column
+        TableColumn matchesCol = t.getColumnModel().getColumn(1);
+        matchesCol.setCellRenderer(new DefaultTableCellRenderer() {{
+            setHorizontalAlignment(SwingConstants.RIGHT);
+        }});
 
         // selection listener: update detail panes / buttons
         t.getSelectionModel().addListSelectionListener(e -> {
@@ -239,6 +253,14 @@ public class CandidateGroupsView implements ViewComponent {
 
     private void wireEvents() {
         eventBus.subscribe(MMIOAccessTableChangedEvent.class, this::onMMIOTableChanged);
+
+        compareBtn.addActionListener(e -> {
+            int[] sel = groupTable.getSelectedRows();
+            if (sel.length != 2) {
+                return;
+            }
+            tool.showDialog(new CompareGroupsDialog(matchingEngine, sel[0], sel[1], currentAddress));
+        });
     }
 
     private void onMMIOTableChanged(MMIOAccessTableChangedEvent ev) {
@@ -366,10 +388,10 @@ public class CandidateGroupsView implements ViewComponent {
     }
 
     private static class GroupTableModel extends AbstractTableModel {
-        enum Col {MATCH, COUNT, PREVIEW}
+        enum Col {IDX, MATCH, COUNT, PREVIEW}
 
-        private static final String[] NAMES = {"Matches", "Devices", "Preview"};
-        private static final Class<?>[] TYPES = {String.class, Integer.class, String.class};
+        private static final String[] NAMES = {"#", "Matches", "Devices", "Preview"};
+        private static final Class<?>[] TYPES = {Integer.class, String.class, Integer.class, String.class};
 
         private final List<GroupRow> rows = new ArrayList<>();
 
@@ -402,6 +424,7 @@ public class CandidateGroupsView implements ViewComponent {
         public Object getValueAt(int r, int c) {
             GroupRow row = rows.get(r);
             return switch (Col.values()[c]) {
+                case IDX -> r;
                 case MATCH -> row.matchText();
                 case COUNT -> row.devices().size();
                 case PREVIEW -> row.preview();

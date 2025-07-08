@@ -5,39 +5,16 @@ import ghidra.program.model.address.Address;
 
 import java.util.*;
 
-/**
- * Core matcher – takes the user-selected MMIO addresses and produces
- * a list of candidate device groups that are indistinguishable for the
- * current address set (within tolerance k).
- *
- * <p>This is a deliberately <b>minimal</b> subset of the original
- * Python prototype – only what the current UI needs.</p>
- */
 public class MatchingEngine {
-
-    /* ── dependencies ─────────────────────────────────────────────────── */
-
     private final DatabaseService db;
-
-    /* ── cached state (cleared on every recompute) ────────────────────── */
 
     private final List<CandidateGroup> groups = new ArrayList<>();
     private final Map<Long, Integer> gain = new HashMap<>();
-
-    /* ── ctor ─────────────────────────────────────────────────────────── */
 
     public MatchingEngine(DatabaseService db) {
         this.db = db;
     }
 
-    /* ── public API ───────────────────────────────────────────────────── */
-
-    /**
-     * Re-calculate candidate groups for the given address list and tolerance.
-     *
-     * @param peripheralAddresses absolute addresses (≤ 200 items expected)
-     * @param tolerance           k – how many addresses a device may miss
-     */
     public void recompute(List<Address> peripheralAddresses, int tolerance) {
         gain.clear();
 
@@ -133,9 +110,6 @@ public class MatchingEngine {
         }
     }
 
-    /**
-     * Unmodifiable view of the latest candidate groups.
-     */
     public List<CandidateGroup> getGroups() {
         return Collections.unmodifiableList(groups);
     }
@@ -151,5 +125,46 @@ public class MatchingEngine {
         }
         int firstDevId = groups.get(groupIndex).deviceIds().getFirst();
         return db.registerInfo(firstDevId, addr.getOffset());
+    }
+
+    public List<DatabaseService.FieldInfo> regFields(int sigId) {
+        return db.regFields(sigId);
+    }
+
+    public Optional<Mapping> mappingForGroup(int groupIndex, Address addr) {
+
+        if (groupIndex < 0 || groupIndex >= groups.size()) {
+            return Optional.empty();
+        }
+
+        List<Integer> devIds = groups.get(groupIndex).deviceIds();
+        List<DatabaseService.RegisterInfo> infos = new ArrayList<>();
+
+        for (int devId : devIds) {
+            db.registerInfo(devId, addr.getOffset()).ifPresent(infos::add);
+        }
+
+        if (infos.isEmpty()) {
+            return Optional.of(new Mapping("<missing>", Mapping.State.MISSING, 0));
+        }
+
+        Set<String> names = new HashSet<>();
+        Set<Integer> sigs = new HashSet<>();
+        for (var i : infos) {
+            names.add(i.peripheral() + "." + i.register());
+            sigs.add(i.sigId());
+        }
+
+        if (names.size() == 1 && sigs.size() == 1) {
+            var i = infos.getFirst();
+            return Optional.of(new Mapping(names.iterator().next(),
+                    Mapping.State.OK,
+                    i.sigId()));
+        }
+        return Optional.of(new Mapping("<ambiguous>", Mapping.State.AMBIGUOUS, 0));
+    }
+
+    public record Mapping(String name, State state, int sigId) {
+        public enum State {OK, MISSING, AMBIGUOUS}
     }
 }
