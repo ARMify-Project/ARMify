@@ -47,6 +47,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel viewContainer = new JPanel(cardLayout);
     private JPanel rootPanel;
+    private NavigationTree nav;
 
     private final MatchingEngine matchingEngine;
     private final ProgramInitializationService programInitializationService;
@@ -87,6 +88,8 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     public void registerInitialActions() {
         views.values().forEach(v -> v.installListeners(tool, this));
         addActionsFor(currentView);
+
+        SwingUtilities.invokeLater(() -> tool.contextChanged(this));
     }
 
     private void addActionsFor(ViewType vt) {
@@ -99,7 +102,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
     private void buildUI() {
 
-        NavigationTree nav = new NavigationTree(eventBus);
+        nav = new NavigationTree(eventBus);
 
         views.put(
                 ViewType.MMIO_ACCESSES,
@@ -133,7 +136,10 @@ public class ARMifyProvider extends ComponentProviderAdapter {
             removeActionsFor(currentView);    // 1. hide old buttons
             currentView = newView;            // 2. remember
             addActionsFor(currentView);       // 3. show new buttons
+            tool.contextChanged(this);
             cardLayout.show(viewContainer, currentView.name());
+
+            SwingUtilities.invokeLater(() -> nav.selectView(currentView));
         });
     }
 

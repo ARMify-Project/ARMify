@@ -20,6 +20,7 @@ public class MMIOAccessTable extends JPanel {
 
     private final AccessTableModel tableModel;
     private final GTable table;
+    private final GTableFilterPanel<MMIOAccessEntry> filter;
 
     public MMIOAccessTable(PluginTool tool) {
         super(new BorderLayout());
@@ -36,9 +37,12 @@ public class MMIOAccessTable extends JPanel {
 
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        GTableFilterPanel<MMIOAccessEntry> filter =
-                new GTableFilterPanel<>(table, tableModel);
+        filter = new GTableFilterPanel<>(table, tableModel);
         add(filter, BorderLayout.SOUTH);
+    }
+
+    public void setFilterText(String text) {
+        filter.setFilterText(text);
     }
 
     public void setData(List<MMIOAccessEntry> rows) {
