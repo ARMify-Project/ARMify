@@ -37,6 +37,8 @@ public class ARMifyPlugin extends ProgramPlugin {
         ProgramAnalysisService programAnalysisService = new ProgramAnalysisService();
         ProgramInitializationService programInitializationService =
                 new ProgramInitializationService(programAnalysisService, programStorageService);
+        DeviceApplyService deviceApplyService =
+                new DeviceApplyService(programStorageService, databaseService);
 
         provider = new ARMifyProvider(
                 tool,
@@ -44,7 +46,8 @@ public class ARMifyPlugin extends ProgramPlugin {
                 matchingEngine,
                 programInitializationService,
                 programStorageService,
-                programAnalysisService
+                programAnalysisService,
+                deviceApplyService
         );
 
         tool.addComponentProvider(provider, false);

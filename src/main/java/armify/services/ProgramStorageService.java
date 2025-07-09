@@ -18,7 +18,7 @@ public class ProgramStorageService {
     private static final String OPT_CATEGORY = "ARMify";
     private static final String OPT_INITIALISED = "Initialised";
     private static final String OPT_K_TOLERANCE = "kTolerance";
-    private static final String OPT_ACTIVE_GROUP = "activeGroup";
+    private static final String OPT_APPLIED_DEVICE_NAME = "AppliedDeviceName";
 
     private static final String PROP_MMIO_OBJ = "ARMify.MMIO.obj";
 
@@ -37,6 +37,32 @@ public class ProgramStorageService {
         } finally {
             prog.endTransaction(txId, true);
         }
+    }
+
+    public void setkTolerance(Program prog, int kTolerance) {
+        int txId = prog.startTransaction("ARMify – set kTolerance");
+        try {
+            prog.getOptions(OPT_CATEGORY).setInt(OPT_K_TOLERANCE, kTolerance);
+        } finally {
+            prog.endTransaction(txId, true);
+        }
+    }
+
+    public int getkTolerance(Program prog) {
+        return prog.getOptions(OPT_CATEGORY).getInt(OPT_K_TOLERANCE, 0);
+    }
+
+    public void setAppliedDeviceName(Program prog, String deviceName) {
+        int txId = prog.startTransaction("ARMify – set device name");
+        try {
+            prog.getOptions(OPT_CATEGORY).setString(OPT_APPLIED_DEVICE_NAME, deviceName);
+        } finally {
+            prog.endTransaction(txId, true);
+        }
+    }
+
+    public String getAppliedDeviceName(Program prog) {
+        return prog.getOptions(OPT_CATEGORY).getString(OPT_APPLIED_DEVICE_NAME, null);
     }
 
     /* ------------------------------------------------------------------ */

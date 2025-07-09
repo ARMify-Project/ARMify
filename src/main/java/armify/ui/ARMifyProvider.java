@@ -1,10 +1,7 @@
 package armify.ui;
 
 import armify.domain.EventBus;
-import armify.services.MatchingEngine;
-import armify.services.ProgramAnalysisService;
-import armify.services.ProgramInitializationService;
-import armify.services.ProgramStorageService;
+import armify.services.*;
 import armify.ui.components.NavigationTree;
 import armify.ui.events.*;
 import armify.ui.views.*;
@@ -53,6 +50,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
     private final ProgramInitializationService programInitializationService;
     private final ProgramStorageService programStorageService;
     private final ProgramAnalysisService programAnalysisService;
+    private final DeviceApplyService deviceApplyService;
     private final PluginTool tool;
 
     private Program currentProgram;
@@ -63,7 +61,8 @@ public class ARMifyProvider extends ComponentProviderAdapter {
                           MatchingEngine matchingEngine,
                           ProgramInitializationService programInitializationService,
                           ProgramStorageService programStorageService,
-                          ProgramAnalysisService programAnalysisService) {
+                          ProgramAnalysisService programAnalysisService,
+                          DeviceApplyService deviceApplyService) {
 
         super(tool, "ARMify Plugin", owner);
         this.tool = tool;
@@ -71,6 +70,7 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         this.programInitializationService = programInitializationService;
         this.programStorageService = programStorageService;
         this.programAnalysisService = programAnalysisService;
+        this.deviceApplyService = deviceApplyService;
 
         buildUI();
         views.values().forEach(v -> v.installListeners(tool, this));
@@ -108,7 +108,8 @@ public class ARMifyProvider extends ComponentProviderAdapter {
                 ViewType.MMIO_ACCESSES,
                 new MMIOAccessesView(programStorageService, programAnalysisService, eventBus, tool)
         );
-        views.put(ViewType.CANDIDATE_GROUPS, new CandidateGroupsView(matchingEngine, eventBus, tool));
+        views.put(ViewType.CANDIDATE_GROUPS,
+                new CandidateGroupsView(matchingEngine, programStorageService, deviceApplyService, eventBus, tool));
 
         for (Map.Entry<ViewType, ViewComponent> e : views.entrySet()) {
             viewContainer.add(e.getValue().getComponent(), e.getKey().name());
@@ -141,6 +142,9 @@ public class ARMifyProvider extends ComponentProviderAdapter {
 
             SwingUtilities.invokeLater(() -> nav.selectView(currentView));
         });
+
+        eventBus.subscribe(DeviceApplyEvent.class, ev -> setSubTitle("Applied: " + ev.deviceName()));
+        eventBus.subscribe(DeviceResetEvent.class, ev -> setSubTitle("Applied: None"));
     }
 
     public void setProgramReference(Program program) {
@@ -276,7 +280,12 @@ public class ARMifyProvider extends ComponentProviderAdapter {
         boolean ok = programInitializationService.ensureInitialised(tool, currentProgram, eventBus);
 
         if (ok) {
+            String appliedName = programStorageService.getAppliedDeviceName(currentProgram);
+            if (appliedName == null) appliedName = "None";
+            setSubTitle("Applied: " + appliedName);
+
             initDone = true;
+
             // show the fully prepared provider
             setVisible(true);          // triggers a new componentShown()
         }
