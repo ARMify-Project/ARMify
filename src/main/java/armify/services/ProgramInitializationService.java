@@ -26,10 +26,10 @@ import ghidra.util.task.Task;
 import ghidra.util.task.TaskLauncher;
 import ghidra.util.task.TaskMonitor;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+
+import static armify.util.ProgramMemory.*;
 
 /**
  * One-time preparation (clear edits, create peripheral block, auto-analysis) and
@@ -134,20 +134,6 @@ public class ProgramInitializationService {
         return true;
     }
 
-    private ArrayList<Long> getSPAndResetVector(Program program) throws MemoryAccessException {
-        ArrayList<Long> results = new ArrayList<>();
-        Address vectorBase = program.getMinAddress();
-        Memory mem = program.getMemory();
-
-        byte[] hdr = new byte[8];
-        mem.getBytes(vectorBase, hdr);
-
-        ByteBuffer bb = ByteBuffer.wrap(hdr).order(ByteOrder.LITTLE_ENDIAN);
-        results.add(Integer.toUnsignedLong(bb.getInt(0)));
-        results.add(Integer.toUnsignedLong(bb.getInt(4)));
-
-        return results;
-    }
 
     private boolean validateCortexM(long stack_pointer, long reset_vector) {
         // Valid SRAM address range for the stack pointer
@@ -193,17 +179,6 @@ public class ProgramInitializationService {
 
         int result = OptionDialog.showYesNoDialog(tool.getToolFrame(), "ARMify initialisation", msg);
         return result == OptionDialog.YES_OPTION;
-    }
-
-    private void removeUserBlocks(Program program) throws LockException {
-
-        Memory mem = program.getMemory();
-        for (MemoryBlock blk : mem.getBlocks()) {
-            if (!blk.getSourceName().equalsIgnoreCase("Elf Loader") &&
-                    !blk.getSourceName().equalsIgnoreCase("Binary Loader")) {
-                mem.removeBlock(blk, TaskMonitor.DUMMY);
-            }
-        }
     }
 
     private boolean isRawBinary(Program p) {
@@ -284,21 +259,6 @@ public class ProgramInitializationService {
                 DataUtilities.ClearDataMode.CLEAR_ALL_UNDEFINED_CONFLICT_DATA);
         listing.getCodeUnitAt(reset_vector)
                 .setComment(CodeUnit.EOL_COMMENT, "Reset vector (initial PC, Thumb)");
-    }
-
-    private void createPeripheralBlock(Program program)
-            throws MemoryConflictException, LockException, AddressOverflowException {
-
-        Memory mem = program.getMemory();
-        AddressSpace space = program.getAddressFactory().getDefaultAddressSpace();
-        Address start = space.getAddress(0x4000_0000L);
-        long size = 0x5FFF_FFFFL - 0x4000_0000L + 1;
-
-        MemoryBlock pb = mem.createUninitializedBlock(
-                "peripherals", start, size, false);
-
-        // set RW, no-execute
-        pb.setPermissions(true, true, false);
     }
 
     private void runAutoAnalysis(Program program, PluginTool tool) {
