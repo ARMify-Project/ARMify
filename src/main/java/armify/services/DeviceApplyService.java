@@ -85,10 +85,11 @@ public class DeviceApplyService {
                     Msg.error(this, "Can't create memory block: memory conflict", ex);
                 }
 
-                StructureDataType structureDataType = new StructureDataType(peripheral.name(), (int) length);
+                StructureDataType structureDataType = new StructureDataType(peripheral.name(), 0);
                 for (DatabaseService.RegisterBrief register : peripheral.registers()) {
                     UnsignedIntegerDataType rType = new UnsignedIntegerDataType(); // TODO respect register size (right data type)
-                    structureDataType.replaceAtOffset((int) (register.baseAddr() - peripheral.baseAddr()), rType, 4, register.name(), ""); // TODO respect size
+                    int offset = (int) (register.baseAddr() - peripheral.baseAddr());
+                    structureDataType.insertAtOffset(offset, rType, rType.getLength(), register.name(), null);
                 }
 
                 dataTypeManager.addDataType(structureDataType, DataTypeConflictHandler.REPLACE_HANDLER);
