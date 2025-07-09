@@ -4,20 +4,21 @@ import armify.domain.EventBus;
 import armify.domain.MMIOAccessEntry;
 import armify.domain.RegisterEntry;
 import armify.services.MatchingEngine;
+import armify.services.DeviceApplyService;
+import armify.services.ProgramStorageService;
 import armify.ui.components.CompareGroupsDialog;
 import armify.ui.components.RegisterTable;
 import armify.ui.components.ViewFieldsDialog;
-import armify.ui.events.FilterRegisterAddressEvent;
-import armify.ui.events.MMIOAccessTableChangedEvent;
-import armify.ui.events.RegisterAddressExcludeEvent;
-import armify.ui.events.ViewSelectionEvent;
+import armify.ui.events.*;
 import docking.ActionContext;
 import docking.action.DockingAction;
 import docking.action.ToolBarData;
 import docking.widgets.OptionDialog;
+import ghidra.app.services.ProgramManager;
 import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.address.Address;
+import ghidra.program.model.listing.Program;
 import resources.Icons;
 import resources.ResourceManager;
 
@@ -33,6 +34,8 @@ import java.util.stream.Collectors;
 
 public class CandidateGroupsView implements ViewComponent {
     private final MatchingEngine matchingEngine;
+    private final ProgramStorageService programStorageService;
+    private final DeviceApplyService deviceApplyService;
     private final EventBus eventBus;
 
     private final JPanel mainPanel;
@@ -40,6 +43,8 @@ public class CandidateGroupsView implements ViewComponent {
     private final JTable groupTable;
     private final JList<String> deviceList;
     private final GroupTableModel groupTableModel;
+    private final JButton applyButton;
+    private final JButton resetButton;
     private final JButton compareBtn;
     private final JScrollPane groupsScroll;
     private final JScrollPane devicesScroll;
@@ -47,6 +52,7 @@ public class CandidateGroupsView implements ViewComponent {
             new JLabel(" No candidate groups ", SwingConstants.CENTER);
     private final JLabel devicesEmptyLabel =
             new JLabel(" Select exactly one group to view its devices ", SwingConstants.CENTER);
+    private final JSpinner kSpin;
 
     private List<Address> currentAddress = List.of();
     private List<RegisterEntry> baseRows = List.of();
@@ -57,8 +63,15 @@ public class CandidateGroupsView implements ViewComponent {
 
     private static final Icon SHOW_ICON = ResourceManager.loadImage("images/table_go.png");
 
-    public CandidateGroupsView(MatchingEngine matchingEngine, EventBus eventBus, PluginTool tool) {
+    public CandidateGroupsView(
+            MatchingEngine matchingEngine,
+            ProgramStorageService programStorageService,
+            DeviceApplyService deviceApplyService,
+            EventBus eventBus,
+            PluginTool tool) {
         this.matchingEngine = matchingEngine;
+        this.programStorageService = programStorageService;
+        this.deviceApplyService = deviceApplyService;
         this.eventBus = eventBus;
         this.tool = tool;
 
@@ -66,14 +79,24 @@ public class CandidateGroupsView implements ViewComponent {
         groupTableModel = new GroupTableModel();
         groupTable = buildGroupsTable();
         deviceList = new JList<>();
+        applyButton = new JButton("Apply");
+        resetButton = new JButton("Reset");
         compareBtn = new JButton("Compare");
         groupsScroll = new JScrollPane(groupTable);
         devicesScroll = new JScrollPane(deviceList);
+
+        SpinnerNumberModel kModel = new SpinnerNumberModel(tolerance, 0, 50, 1);
+        kSpin = new JSpinner(kModel);
 
         mainPanel = new JPanel(new BorderLayout());
         buildUI();
         wireEvents();
         buildActions();
+    }
+
+    private Program currentProgram() {
+        ProgramManager pm = tool.getService(ProgramManager.class);
+        return (pm == null) ? null : pm.getCurrentProgram();
     }
 
     private void buildUI() {
@@ -136,12 +159,12 @@ public class CandidateGroupsView implements ViewComponent {
         // left side
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
 
-        JButton applyBtn = new JButton("Apply");
-        JButton resetBtn = new JButton("Reset");
-        compareBtn.setEnabled(false);              // still starts disabled
+        applyButton.setEnabled(false);
+        resetButton.setEnabled(false);
+        compareBtn.setEnabled(false);
 
-        left.add(applyBtn);
-        left.add(resetBtn);
+        left.add(applyButton);
+        left.add(resetButton);
         left.add(compareBtn);
 
         // right side
@@ -149,14 +172,16 @@ public class CandidateGroupsView implements ViewComponent {
 
         right.add(new JLabel("Tolerance (k):"));
 
-        SpinnerNumberModel kModel = new SpinnerNumberModel(tolerance, 0, 50, 1);
-        JSpinner kSpin = new JSpinner(kModel);
         ((JSpinner.NumberEditor) kSpin.getEditor()).getTextField().setColumns(3);
         right.add(kSpin);
 
         // react to user edits
         kSpin.addChangeListener(e -> {
             tolerance = (int) kSpin.getValue();
+
+            Program p = currentProgram();
+            if (p != null) programStorageService.setkTolerance(p, tolerance);
+
             runMatching();
         });
 
@@ -253,6 +278,39 @@ public class CandidateGroupsView implements ViewComponent {
 
     private void wireEvents() {
         eventBus.subscribe(MMIOAccessTableChangedEvent.class, this::onMMIOTableChanged);
+        eventBus.subscribe(ViewSelectionEvent.class, evt -> {
+            if (evt.getViewType().equals(ViewType.CANDIDATE_GROUPS)) {
+                Program program = currentProgram();
+                if (program != null && deviceApplyService.isApplied(program)) {
+                    resetButton.setEnabled(true);
+                }
+            }
+        });
+
+        deviceList.addListSelectionListener(
+                e -> applyButton.setEnabled(deviceList.getSelectedIndices().length == 1));
+
+        applyButton.addActionListener(e -> {
+            Program program = currentProgram();
+            if (program == null) return;
+            if (deviceList.getSelectedIndices().length != 1) return;
+
+            String deviceName = deviceList.getSelectedValue();
+            deviceApplyService.apply(program, deviceName);
+
+            resetButton.setEnabled(true);
+            eventBus.publish(new DeviceApplyEvent(deviceName));
+        });
+
+        resetButton.addActionListener(e -> {
+            Program program = currentProgram();
+            if (program == null) return;
+
+            deviceApplyService.reset(program);
+
+            resetButton.setEnabled(false);
+            eventBus.publish(new DeviceResetEvent());
+        });
 
         compareBtn.addActionListener(e -> {
             int[] sel = groupTable.getSelectedRows();
@@ -282,6 +340,15 @@ public class CandidateGroupsView implements ViewComponent {
     }
 
     private void runMatching() {
+        Program program = currentProgram();
+        if (program == null) return;
+
+        // check if spinner has the same tolerance as stored tolerance
+        int storedTolerance = programStorageService.getkTolerance(program);
+        if (storedTolerance != tolerance) {
+            kSpin.setValue(storedTolerance);
+        }
+
         matchingEngine.recompute(currentAddress, tolerance);
 
         // reload baseRows with fresh gain values
