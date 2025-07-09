@@ -172,6 +172,74 @@ public class DatabaseService implements AutoCloseable {
         return list;
     }
 
+    public List<PeripheralInfo> peripherals(String deviceName) {
+        if (deviceName == null || deviceName.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        // 1. resolve the device-id
+        Integer deviceId = null;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT id FROM devices WHERE name = ? LIMIT 1")) {
+            ps.setString(1, deviceName);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    deviceId = rs.getInt(1);
+                }
+            }
+        } catch (SQLException ex) {
+            throw new RuntimeException("device id query failed", ex);
+        }
+        if (deviceId == null) {
+            return Collections.emptyList();  // unknown device name
+        }
+
+        // 2. fetch peripherals for that device (sorted)
+        List<PeripheralInfo> out = new ArrayList<>();
+        String sqlPeriph = """
+                  SELECT id, name, base_addr
+                    FROM peripherals
+                   WHERE device_id = ?
+                ORDER BY base_addr
+                """;
+        try (PreparedStatement psP = conn.prepareStatement(sqlPeriph)) {
+            psP.setInt(1, deviceId);
+            try (ResultSet rsP = psP.executeQuery()) {
+                while (rsP.next()) {
+                    int pid = rsP.getInt("id");
+                    String pName = rsP.getString("name");
+                    long pBase = rsP.getLong("base_addr");
+
+                    /* 3) collect this peripheral’s registers (sorted) */
+                    List<RegisterBrief> regs = new ArrayList<>();
+                    long endAddr = pBase;           // default if no registers
+
+                    try (PreparedStatement psR = conn.prepareStatement(
+                            "SELECT name, base_addr                       " +
+                                    "  FROM registers                             " +
+                                    " WHERE peripheral_id = ?                    " +
+                                    " ORDER BY base_addr")) {
+                        psR.setInt(1, pid);
+                        try (ResultSet rsR = psR.executeQuery()) {
+                            while (rsR.next()) {
+                                String rName = rsR.getString("name");
+                                long rBase = rsR.getLong("base_addr");
+                                regs.add(new RegisterBrief(rName, rBase));
+                                endAddr = rBase;     // last row = highest address
+                            }
+                        }
+                    }
+
+                    out.add(new PeripheralInfo(pName, pBase, endAddr + 4, regs)); // TODO respect reg size
+                }
+            }
+        } catch (SQLException ex) {
+            throw new RuntimeException("peripherals query failed", ex);
+        }
+
+        return out;
+    }
+
     // ───────────────── housekeeping ─────────────────
     @Override
     public void close() {
@@ -182,7 +250,14 @@ public class DatabaseService implements AutoCloseable {
     }
 
     // ───────────────── record helpers ───────────────
-    public record RegisterInfo(String peripheral, int baseAddr,
+    public record PeripheralInfo(String name, long baseAddr, long endAddr,
+                                 List<RegisterBrief> registers) {
+    }
+
+    public record RegisterBrief(String name, long baseAddr) {
+    }
+
+    public record RegisterInfo(String peripheral, long baseAddr,
                                String register, int sigId, List<FieldInfo> fields) {
     }
 
