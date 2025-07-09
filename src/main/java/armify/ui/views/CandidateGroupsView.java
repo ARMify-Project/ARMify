@@ -19,6 +19,7 @@ import ghidra.framework.plugintool.ComponentProviderAdapter;
 import ghidra.framework.plugintool.PluginTool;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Program;
+import ghidra.util.task.TaskBuilder;
 import resources.Icons;
 import resources.ResourceManager;
 
@@ -296,20 +297,43 @@ public class CandidateGroupsView implements ViewComponent {
             if (deviceList.getSelectedIndices().length != 1) return;
 
             String deviceName = deviceList.getSelectedValue();
-            deviceApplyService.apply(program, deviceName);
 
-            resetButton.setEnabled(true);
-            eventBus.publish(new DeviceApplyEvent(deviceName));
+            TaskBuilder.withRunnable(monitor -> {
+                        monitor.setMessage("Applying device peripherals");
+                        deviceApplyService.apply(program, deviceName);
+
+                        SwingUtilities.invokeLater(() -> {
+                            resetButton.setEnabled(true);
+                            eventBus.publish(new DeviceApplyEvent(deviceName));
+                        });
+                    })
+                    .setTitle("Applying “" + deviceName + "”")
+                    .setHasProgress(false)
+                    .setCanCancel(false)
+                    .setParent(tool.getToolFrame())
+                    .setLaunchDelay(0)
+                    .launchModal();
         });
 
         resetButton.addActionListener(e -> {
             Program program = currentProgram();
             if (program == null) return;
 
-            deviceApplyService.reset(program);
+            TaskBuilder.withRunnable(monitor -> {
+                        monitor.setMessage("Resetting device peripherals");
+                        deviceApplyService.reset(program);
 
-            resetButton.setEnabled(false);
-            eventBus.publish(new DeviceResetEvent());
+                        SwingUtilities.invokeLater(() -> {
+                            resetButton.setEnabled(false);
+                            eventBus.publish(new DeviceResetEvent());
+                        });
+                    })
+                    .setTitle("Resetting device peripherals")
+                    .setHasProgress(false)
+                    .setCanCancel(false)
+                    .setParent(tool.getToolFrame())
+                    .setLaunchDelay(0)
+                    .launchModal();
         });
 
         compareBtn.addActionListener(e -> {
@@ -398,7 +422,7 @@ public class CandidateGroupsView implements ViewComponent {
                 if (infoOpt.isPresent()) {
                     var info = infoOpt.get();
                     Address baseAddr =
-                            a.getAddressSpace().getAddress(Integer.toUnsignedLong(info.baseAddr()));
+                            a.getAddressSpace().getAddress(info.baseAddr());
                     enriched.add(new RegisterEntry(a, gain,
                             info.peripheral(),
                             baseAddr,
