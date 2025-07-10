@@ -219,7 +219,7 @@ public class ProgramInitializationService {
             int mirrorLen = (int) Math.min(block.getSize(), NON_ZERO_FLASH_LOAD_ADDRESS);
             Address mirrorAt = space.getAddress(0L);
             MessageLog log = new MessageLog();
-            MemoryBlock mirror = MemoryBlockUtils.createBitMappedBlock(
+            MemoryBlock mirror = MemoryBlockUtils.createByteMappedBlock(
                     program,
                     "flash_mirror",    // name
                     mirrorAt,          // start @ 0x0
@@ -227,8 +227,8 @@ public class ProgramInitializationService {
                     mirrorLen,         // length in bytes
                     "Flash mirror",    // comment
                     "ARMify Plugin",   // source
-                    block.isRead(),    // r
-                    block.isWrite(),   // w
+                    true,    // r
+                    false,   // w
                     block.isExecute(), // x
                     false,             // overlay?
                     log
