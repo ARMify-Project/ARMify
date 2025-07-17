@@ -67,11 +67,11 @@ buildExtension.exclude '.idea/**'
 buildExtension.exclude 'README.md'
 buildExtension.exclude 'screens/**'
 
-// Load version from extension.properties
+// Load pluginVersion from extension.properties
 def extProps = new Properties()
 file('extension.properties').withInputStream { extProps.load(it) }
 
-version = extProps.getProperty('version') ?: 'unspecified'
+version = extProps.getProperty('pluginVersion') ?: 'unspecified'
 
 afterEvaluate {
     tasks.named('zipSource', Zip).configure {
