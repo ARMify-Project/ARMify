@@ -129,6 +129,6 @@ Project webpage: https://nlnet.nl/project/ARMify/
 ---
 
 The apply functionality (code
-in [DeviceApplyService.java](src/main/src/main/java/armify/services/DeviceApplyService.java))
+in [DeviceApplyService.java](src/main/java/armify/services/DeviceApplyService.java))
 is based
 on [SVD-Loader-Ghidra](https://github.com/leveldown-security/SVD-Loader-Ghidra).
