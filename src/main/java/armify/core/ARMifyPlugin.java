@@ -2,7 +2,6 @@ package armify.core;
 
 import armify.services.*;
 import armify.ui.ARMifyProvider;
-import ghidra.app.ExamplesPluginPackage;
 import ghidra.app.plugin.PluginCategoryNames;
 import ghidra.app.plugin.ProgramPlugin;
 import ghidra.framework.model.DomainObjectListener;
@@ -15,9 +14,9 @@ import java.nio.file.Path;
 
 @PluginInfo(
         status = PluginStatus.RELEASED,
-        packageName = ExamplesPluginPackage.NAME,
-        category = PluginCategoryNames.EXAMPLES,
-        shortDescription = "ARMify plugin",
+        packageName = "ARMify",
+        category = PluginCategoryNames.ANALYSIS,
+        shortDescription = "ARMify Plugin",
         description = "Identify Cortex-M MCUs from MMIO patterns"
 )
 public class ARMifyPlugin extends ProgramPlugin {
