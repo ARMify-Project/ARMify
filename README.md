@@ -21,10 +21,10 @@ identification.
 
 ### Candidate Groups View
 
-The Candidate Groups View displays the set of included register addresses. If a device is selected, the corresponding
-register and peripheral names appear in the **Included Register Addresses** table (top). The **Candidate Groups**
-table (bottom) lists all groups of compatible devices sharing the same memory map for the currently identified register
-accesses. Selecting a group reveals its matching devices on the right.
+The Candidate Groups View displays the set of included register addresses. If a candidate group is selected, the
+corresponding register and peripheral names appear in the **Included Register Addresses** table (top). The
+**Candidate Groups** table (bottom) lists all groups of compatible devices sharing the same memory map for the currently
+identified register accesses. Selecting a group reveals its matching devices on the right.
 
 ![Candidate Groups View](screens/candidate_groups_view.png)
 
