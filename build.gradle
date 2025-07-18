@@ -66,6 +66,7 @@ dependencies {
 buildExtension.exclude '.idea/**'
 buildExtension.exclude 'README.md'
 buildExtension.exclude 'screens/**'
+buildExtension.exclude 'tutorials/**'
 
 // Load pluginVersion from extension.properties
 def extProps = new Properties()
