@@ -78,6 +78,18 @@ Comparison of the decompiled code before and after applying a device in ARMify.
 The ARMify plugin is now active and ready to use within Ghidra. It can be opened in the CodeBrowser via `Window` →
 `ARMify Plugin`.
 
+## Tutorials & Samples
+
+Two hands‑on tutorials live in the [`tutorials/`](tutorials/) folder of this repository. Each contains a firmware binary
+and a walkthrough (`README.md`).
+
+| Tutorial   | Target MCU                        | Format     | Highlights                                      |
+|------------|-----------------------------------|------------|-------------------------------------------------|
+| *Basic*    | [EFR32MG1](tutorials/EFR32MG1/)   | ELF file   | Quick start, device apply                       |
+| *Advanced* | [STM32F446](tutorials/STM32F446/) | RAW binary | Multiple candidate groups, incremental analysis |
+
+Follow them to get familiar with ARMify’s workflow before using it on your own firmware.
+
 ## Build from Source
 
 Java Development Kit (JDK) version 21 or later is required to build this project. To build the ARMify plugin from
