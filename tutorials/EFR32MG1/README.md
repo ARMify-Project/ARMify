@@ -2,9 +2,9 @@
 
 ## Source
 
-This firmware is built from the public repository **[lzptr/efr32\_base](https://github.com/lzptr/efr32_base)**.
-Starting from the repository’s default branch (commit current as of 18 Jul 2025), the following patch was applied to *
-*`CMakeLists.txt`** to target an EFR32 MG1 device and a locally installed GNU ARM toolchain:
+This firmware is built from the public repository [lzptr/efr32\_base](https://github.com/lzptr/efr32_base).
+Starting from the repository’s default branch, the following patch was applied to `CMakeLists.txt` to target an EFR32
+MG1 device and a locally installed GNU ARM toolchain:
 
 ```diff
 @@
@@ -16,13 +16,9 @@ Starting from the repository’s default branch (commit current as of 18 Jul 202
      set(BOARD BRD4166A)                     # Thunderboard Sense 2
 ```
 
-After configuring the VS Code CMake workspace with the patched project and pressing **“Build”**, the resulting debug
-binary is produced at:
+To build the firmware, follow the instructions in the [lzptr/efr32\_base](https://github.com/lzptr/efr32_base)
+repository.
 
-```
-build/bin/EFR32MG1_blink_debug
-```
-
-The binary is available here: [EFR32MG1_blink_debug](EFR32MG1_blink_debug)
+For convenience, the pre-build binary is available here: [EFR32MG1_blink_debug](EFR32MG1_blink_debug)
 
 ## Tutorial

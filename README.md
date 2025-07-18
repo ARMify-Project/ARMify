@@ -81,12 +81,12 @@ The ARMify plugin is now active and ready to use within Ghidra. It can be opened
 ## Tutorials & Samples
 
 Two hands‑on tutorials live in the [`tutorials/`](tutorials/) folder of this repository. Each contains a firmware binary
-and a walkthrough (`README.md`).
+and a walkthrough (README.md).
 
-| Tutorial   | Target MCU                        | Format     | Highlights                                      |
-|------------|-----------------------------------|------------|-------------------------------------------------|
-| *Basic*    | [EFR32MG1](tutorials/EFR32MG1/)   | ELF file   | Quick start, device apply                       |
-| *Advanced* | [STM32F446](tutorials/STM32F446/) | RAW binary | Multiple candidate groups, incremental analysis |
+| Tutorial | Target MCU                                 | Format     | Highlights                                      |
+|----------|--------------------------------------------|------------|-------------------------------------------------|
+| Basic    | [EFR32MG1](tutorials/EFR32MG1/README.md)   | ELF file   | Quick start, device apply                       |
+| Advanced | [STM32F446](tutorials/STM32F446/README.md) | RAW binary | Multiple candidate groups, incremental analysis |
 
 Follow them to get familiar with ARMify’s workflow before using it on your own firmware.
 
