@@ -1,9 +1,9 @@
 # ARMify Plugin
 
-ARMify is a plugin for the open-source reverse engineering
+ARMify is a plugin for the open-source reverse-engineering
 tool [Ghidra](https://github.com/NationalSecurityAgency/ghidra), with its primary goal being to assist security
 analysts in analyzing ARM Cortex-M bare-metal firmware. This is achieved through automatic microcontroller model
-identification and annotation of memory-mapped peripherals. It helps analysts to understand how the firmware interacts
+identification and annotation of memory-mapped peripherals. It helps analysts understand how the firmware interacts
 with microcontroller features, offering significant time savings compared to manual cross-referencing with the
 microcontroller datasheet.
 
@@ -56,6 +56,9 @@ Comparison of the decompiled code before and after applying a device in ARMify.
     * Make sure the ARMify extension is checked/enabled.
     * Click **OK** to finish the installation.
     * Restart Ghidra for the changes to take effect.
+
+   **Important Note**: Ghidra version 11.4.0 introduced a bug and installing extensions is currently not working. Should
+   be fixed on 11.4.1, but in the meantime please use Ghidra version 11.3.2.
 
 3. **Enable the ARMify Plugin in CodeBrowser**
 
@@ -121,7 +124,7 @@ source, follow these steps:
    gradle
    ```
 
-   After a successful build, the ZIP archive for the plugin will be created under:
+   After a successful build, the ZIP archive for the plugin will be created in the following location:
 
    ```
    dist/
@@ -131,7 +134,7 @@ source, follow these steps:
 
    Follow the [Install](#install) instructions above to add the ZIP archive to Ghidra.
 
-## Acknowledgement
+## Acknowledgment
 
 This project was made possible with funding from [NGI Zero Entrust Fund](https://nlnet.nl/thema/NGI0Entrust.html). NGI
 Zero Entrust Fund is part of the European Commission's [Next Generation Internet](https://www.ngi.eu/) initiative.
