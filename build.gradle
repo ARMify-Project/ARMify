@@ -68,11 +68,12 @@ buildExtension.exclude 'README.md'
 buildExtension.exclude 'screens/**'
 buildExtension.exclude 'tutorials/**'
 
-// Load pluginVersion from extension.properties
+// Load the plugin *own* version from extension.properties
 def extProps = new Properties()
 file('extension.properties').withInputStream { extProps.load(it) }
 
 version = extProps.getProperty('pluginVersion') ?: 'unspecified'
+def ghidraVer = project.ext.ghidra_version
 
 afterEvaluate {
     tasks.named('zipSource', Zip).configure {
@@ -80,6 +81,6 @@ afterEvaluate {
     }
 
     tasks.named('buildExtension', Zip).configure {
-        archiveFileName = "Ghidra_ARMify_Plugin_v${version}.zip"
+        archiveFileName = "Ghidra_${ghidraVer}_ARMify_v${version}.zip"
     }
 }
