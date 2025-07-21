@@ -57,8 +57,9 @@ Comparison of the decompiled code before and after applying a device in ARMify.
     * Click **OK** to finish the installation.
     * Restart Ghidra for the changes to take effect.
 
-   **Important Note**: Ghidra version 11.4.0 introduced a bug and installing extensions is currently not working. Should
-   be fixed on 11.4.1, but in the meantime please use Ghidra version 11.3.2.
+   **Important Note**: Ghidra version 11.4.0 contains a bug that prevents extensions from being installed.
+   This [issue](https://github.com/NationalSecurityAgency/ghidra/issues/8294) is
+   expected to be resolved in version 11.4.1. In the meantime, please use Ghidra version 11.3.2.
 
 3. **Enable the ARMify Plugin in CodeBrowser**
 
