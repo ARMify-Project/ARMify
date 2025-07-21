@@ -12,8 +12,14 @@ import java.util.List;
 public class ViewFieldsDialog extends DialogComponentProvider {
     private final FieldTable fieldTable;
 
-    public ViewFieldsDialog(String registerName, List<DatabaseService.FieldInfo> fields) {
-        super("View Fields for Register: " + registerName, false, true, true, false);
+    public ViewFieldsDialog(String registerName, List<DatabaseService.FieldInfo> fields, String selGroup) {
+        super(
+                "Fields for Register: " + registerName + " (Group: " + selGroup + ")",
+                false,
+                true,
+                true,
+                false
+        );
 
         fieldTable = new FieldTable();
 
