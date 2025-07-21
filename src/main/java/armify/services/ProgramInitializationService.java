@@ -216,16 +216,18 @@ public class ProgramInitializationService {
 
         // 5. If the flash is mapped to non-zero, mirror the first bytes to 0x0
         if (useNonZeroFlashBase) {
-            int mirrorLen = (int) Math.min(block.getSize(), NON_ZERO_FLASH_LOAD_ADDRESS);
+            // mirror only the first 16 words (64 bytes) of the vector table
+            final int VECTOR_HEADER_LEN = 0x40;
+            int mirrorLen = (int) Math.min(block.getSize(), VECTOR_HEADER_LEN);
             Address mirrorAt = space.getAddress(0L);
             MessageLog log = new MessageLog();
             MemoryBlock mirror = MemoryBlockUtils.createByteMappedBlock(
                     program,
-                    "flash_mirror",    // name
+                    "vector_table_flash_mirror",    // name
                     mirrorAt,          // start @ 0x0
                     newBase,           // base = flash block’s new start
                     mirrorLen,         // length in bytes
-                    "Flash mirror",    // comment
+                    "Vector Table Flash mirror",    // comment
                     "ARMify Plugin",   // source
                     true,    // r
                     false,   // w
@@ -235,7 +237,7 @@ public class ProgramInitializationService {
             );
             if (mirror == null) {
                 throw new MemoryConflictException(
-                        "Failed to create flash mirror: " + log);
+                        "Failed to create 64‑byte flash mirror: " + log);
             }
         }
     }
