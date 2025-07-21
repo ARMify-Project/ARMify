@@ -259,10 +259,14 @@ public class CandidateGroupsView implements ViewComponent {
         DockingAction view = new DockingAction("View", "ARMify Plugin") {
             @Override
             public void actionPerformed(ActionContext actionContext) {
-                RegisterEntry sel = registerTable.getSelectedEntry();
-                if (sel == null) return;
+                RegisterEntry selReg = registerTable.getSelectedEntry();
+                if (selReg == null) return;
 
-                ViewFieldsDialog dlg = new ViewFieldsDialog(sel.registerName(), sel.fieldInfos());
+                int[] selGroupIndexArray = groupTable.getSelectedRows();
+                if (selGroupIndexArray.length != 1) return;
+                String selGroupPreview = (String) groupTable.getValueAt(selGroupIndexArray[0], 3);
+
+                ViewFieldsDialog dlg = new ViewFieldsDialog(selReg.registerName(), selReg.fieldInfos(), selGroupPreview);
                 tool.showDialog(dlg);
             }
 
