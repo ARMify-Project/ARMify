@@ -1,6 +1,7 @@
 package armify.services;
 
 
+import armify.domain.MMIOAccessEntry;
 import ghidra.framework.store.LockException;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressOverflowException;
@@ -44,6 +45,9 @@ public class DeviceApplyService {
         if (isApplied(program)) {
             reset(program);
         }
+
+        // Backup current MMIO Accesses
+        List<MMIOAccessEntry> mmioAccesses = storage.loadMMIOAccesses(program);
 
         int tx = program.startTransaction("Apply device " + deviceName);
         boolean commit = false;
@@ -105,11 +109,14 @@ public class DeviceApplyService {
                 } catch (CodeUnitInsertionException ex) {
                     Msg.error(this, "Can't create data", ex);
                 }
-
-                storage.setAppliedDeviceName(program, deviceName);
-
-                commit = true;
             }
+            
+            // Restore MMIO accesses after memory blocks were changed
+            storage.saveMMIOAccesses(program, mmioAccesses);
+
+            storage.setAppliedDeviceName(program, deviceName);
+
+            commit = true;
         } finally {
             program.endTransaction(tx, commit);
         }
@@ -119,6 +126,9 @@ public class DeviceApplyService {
         if (program == null) {
             return;
         }
+
+        // Backup current MMIO Accesses
+        List<MMIOAccessEntry> mmioAccesses = storage.loadMMIOAccesses(program);
 
         int tx = program.startTransaction("ARMify reset");
         boolean commit = false;
@@ -176,7 +186,10 @@ public class DeviceApplyService {
                 Msg.error(this, "Can't recreate default peripheral block", ex);
             }
 
-            // 5. Clear the stored device name
+            // 5. Restore MMIO accesses after memory blocks were changed
+            storage.saveMMIOAccesses(program, mmioAccesses);
+
+            // 6. Clear the stored device name
             storage.setAppliedDeviceName(program, null);
             commit = true;
         } finally {
